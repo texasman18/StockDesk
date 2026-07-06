@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="StockDesk">
+<meta name="theme-color" content="#ffffff">
+<title>StockDesk — 스탁데스크</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ===================== 상단 헤더 (F08 공통 새로고침) ===================== -->
+<header id="app-header">
+  <div class="header-inner">
+    <h1 id="header-title">StockDesk</h1>
+    <div class="header-actions">
+      <span id="last-refreshed" class="last-refreshed"></span>
+      <button id="btn-refresh" class="icon-btn" aria-label="새로고침" title="전체 새로고침">&#x21bb;</button>
+      <button id="btn-add" class="icon-btn" aria-label="종목 추가" title="종목 추가">＋</button>
+    </div>
+  </div>
+</header>
+
+<main id="app-main">
+
+  <!-- ===================== S02 홈 대시보드 ===================== -->
+  <section id="screen-dashboard" class="screen">
+    <!-- F04 요약 카드 4종 -->
+    <div id="summary-cards" class="summary-grid">
+      <div class="summary-card"><div class="summary-label">총 매입금액</div><div class="summary-value num" id="sum-cost">-</div></div>
+      <div class="summary-card"><div class="summary-label">총 평가금액</div><div class="summary-value num" id="sum-eval">-</div></div>
+      <div class="summary-card"><div class="summary-label">총 평가손익</div><div class="summary-value num" id="sum-pl">-</div></div>
+      <div class="summary-card"><div class="summary-label">총 손익률</div><div class="summary-value num" id="sum-rate">-</div></div>
+    </div>
+
+    <!-- F09 시장 구분 탭 -->
+    <div id="market-tabs" class="tabs" role="tablist">
+      <button class="tab active" data-market="ALL" role="tab">전체</button>
+      <button class="tab" data-market="KR" role="tab">한국장</button>
+      <button class="tab" data-market="US" role="tab">미국장</button>
+      <button class="tab" data-market="ETF" role="tab">ETF</button>
+    </div>
+
+    <!-- 종목 카드 리스트 -->
+    <div id="holding-list" class="card-list"></div>
+    <div id="empty-state" class="empty-state" hidden>
+      <p>등록된 종목이 없습니다.</p>
+      <button id="btn-empty-add" class="btn btn-primary">첫 종목 추가하기</button>
+    </div>
+  </section>
+
+  <!-- ===================== S03 종목 상세 ===================== -->
+  <section id="screen-detail" class="screen" hidden>
+    <button class="back-btn" data-back>&larr; 뒤로</button>
+    <div id="detail-head"></div>
+    <div class="chart-wrap">
+      <div class="chart-title-row">
+        <span id="chart-title">당일 차트</span>
+        <span id="chart-note" class="chart-note"></span>
+      </div>
+      <canvas id="detail-chart" height="220"></canvas>
+    </div>
+    <div class="section-block">
+      <h2 class="section-title">관련 뉴스 <span class="section-sub">최신 3건</span></h2>
+      <div id="detail-news"></div>
+    </div>
+    <div class="detail-actions">
+      <button id="btn-detail-calc" class="btn btn-primary">물타기 계산</button>
+      <button id="btn-detail-edit" class="btn">수정</button>
+      <button id="btn-detail-delete" class="btn btn-danger">삭제</button>
+    </div>
+  </section>
+
+  <!-- ===================== S05 모닝 브리핑 ===================== -->
+  <section id="screen-briefing" class="screen" hidden>
+    <div class="briefing-head">
+      <h2 class="section-title">모닝 브리핑</h2>
+      <span class="briefing-auto-note">자동 갱신: 매일 08:00</span>
+    </div>
+    <div id="briefing-updated" class="last-refreshed"></div>
+
+    <div class="section-block">
+      <h3 class="section-title-sm">핵심 지표</h3>
+      <table class="index-table num" id="briefing-indices"></table>
+      <button id="btn-briefing-more" class="btn btn-ghost">더보기</button>
+      <table class="index-table num" id="briefing-indices-more" hidden></table>
+    </div>
+
+    <div class="section-block briefing-holdings-news">
+      <h3 class="section-title-sm">보유종목 관련 뉴스</h3>
+      <div id="briefing-holding-news"></div>
+    </div>
+
+    <div class="section-block">
+      <h3 class="section-title-sm">시장 전체 뉴스</h3>
+      <div id="briefing-market-news"></div>
+    </div>
+  </section>
+
+  <!-- ===================== S06 설정 ===================== -->
+  <section id="screen-settings" class="screen" hidden>
+    <h2 class="section-title">설정</h2>
+
+    <div class="settings-group">
+      <div class="settings-group-title">시세</div>
+      <label class="settings-row">
+        <span>자동 새로고침 주기</span>
+        <select id="set-refresh-interval">
+          <option value="0">사용 안 함</option>
+          <option value="1">1분</option>
+          <option value="5">5분</option>
+          <option value="10">10분</option>
+        </select>
+      </label>
+      <label class="settings-row">
+        <span>데모 시세 모드<br><small>실제 시세 API 연동 전 시뮬레이션 시세 사용</small></span>
+        <input type="checkbox" id="set-demo-mode">
+      </label>
+      <label class="settings-row">
+        <span>환율 (USD/KRW)<br><small>해외주식 원화 환산에 사용 (F10)</small></span>
+        <input type="number" id="set-fx-rate" class="num" step="0.1" min="1" inputmode="decimal">
+      </label>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-title">알림</div>
+      <label class="settings-row">
+        <span>모닝 브리핑 알림<br><small>푸시 알림은 API/백그라운드 정책 확정 후 활성화 예정</small></span>
+        <input type="checkbox" id="set-notify">
+      </label>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-title">데이터 백업/복원</div>
+      <div class="settings-row">
+        <button id="btn-backup" class="btn">백업 (JSON 내보내기)</button>
+        <button id="btn-restore" class="btn">복원 (가져오기)</button>
+        <input type="file" id="restore-file" accept="application/json" hidden>
+      </div>
+      <div class="settings-row">
+        <button id="btn-reset" class="btn btn-danger">전체 데이터 초기화</button>
+      </div>
+    </div>
+
+    <div class="settings-note">
+      실계좌 연동 없음 — 모든 데이터는 이 기기(브라우저)에만 저장됩니다.<br>
+      시세/뉴스 실데이터 연동은 기획서 7장 외부 API 확정 후 <code>js/quotes.js</code>에 연결합니다.
+    </div>
+  </section>
+
+</main>
+
+<!-- ===================== 하단 탭바 ===================== -->
+<nav id="tabbar">
+  <button class="tabbar-btn active" data-screen="dashboard">홈</button>
+  <button class="tabbar-btn" data-screen="briefing">브리핑</button>
+  <button class="tabbar-btn" data-screen="settings">설정</button>
+</nav>
+
+<!-- ===================== S01 종목 추가/수정 (모달) ===================== -->
+<div id="modal-holding" class="modal-backdrop" hidden>
+  <div class="modal">
+    <h2 id="holding-modal-title" class="modal-title">종목 추가</h2>
+    <form id="holding-form">
+      <label class="form-row">
+        <span class="form-label">시장 구분</span>
+        <div class="seg" id="form-market">
+          <button type="button" class="seg-btn active" data-value="KR">한국장</button>
+          <button type="button" class="seg-btn" data-value="US">미국장</button>
+          <button type="button" class="seg-btn" data-value="ETF">ETF</button>
+        </div>
+      </label>
+      <label class="form-row">
+        <span class="form-label">티커 / 종목코드</span>
+        <input type="text" id="form-ticker" autocomplete="off" autocapitalize="characters" placeholder="예: 005930, AAPL" required>
+        <div id="ticker-suggest" class="suggest-list" hidden></div>
+      </label>
+      <label class="form-row">
+        <span class="form-label">종목명</span>
+        <input type="text" id="form-name" autocomplete="off" placeholder="자동 완성 또는 직접 입력" required>
+      </label>
+      <label class="form-row">
+        <span class="form-label">보유수량</span>
+        <input type="number" id="form-quantity" class="num" min="0.0001" step="any" inputmode="decimal" required>
+      </label>
+      <label class="form-row">
+        <span class="form-label">매입 평단가 <span id="form-currency-label" class="muted"></span></span>
+        <input type="number" id="form-avg" class="num" min="0.0001" step="any" inputmode="decimal" required>
+      </label>
+      <div id="dup-notice" class="dup-notice" hidden>
+        <p>이미 보유 중인 종목입니다. 어떻게 반영할까요?</p>
+        <label><input type="radio" name="dup-mode" value="merge" checked> 추가매수로 합산 (평단가 자동 재계산)</label>
+        <label><input type="radio" name="dup-mode" value="replace"> 입력값으로 덮어쓰기 (수동 직접입력)</label>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn" data-close-modal>취소</button>
+        <button type="submit" class="btn btn-primary" id="holding-submit">저장</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===================== S04 물타기 계산기 (모달) ===================== -->
+<div id="modal-calc" class="modal-backdrop" hidden>
+  <div class="modal">
+    <h2 class="modal-title">물타기 계산기</h2>
+    <div id="calc-stock-info" class="calc-info num"></div>
+
+    <div class="seg" id="calc-mode">
+      <button type="button" class="seg-btn active" data-value="price">목표 평단가</button>
+      <button type="button" class="seg-btn" data-value="rate">목표 손익률</button>
+    </div>
+
+    <div class="form-row">
+      <span class="form-label" id="calc-input-label">목표 평단가</span>
+      <input type="number" id="calc-input" class="num" step="any" inputmode="decimal">
+      <input type="range" id="calc-slider" step="any">
+      <div id="calc-error" class="inline-error" hidden></div>
+    </div>
+
+    <div id="calc-result" class="calc-result num" hidden>
+      <div class="calc-result-row"><span>필요 추가매수 수량</span><b id="calc-add-qty">-</b></div>
+      <div class="calc-result-row"><span>필요 추가매수 금액</span><b id="calc-add-amount">-</b></div>
+      <div class="calc-result-row"><span>예상 총 매입금액</span><b id="calc-total-cost">-</b></div>
+      <div class="calc-result-row"><span>예상 새 평단가</span><b id="calc-new-avg">-</b></div>
+      <div class="calc-result-row"><span>예상 새 손익률</span><b id="calc-new-rate">-</b></div>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn" data-close-modal>닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 종목 카드 롱프레스 액션시트 (F01 수정/삭제) -->
+<div id="action-sheet" class="modal-backdrop" hidden>
+  <div class="sheet">
+    <div id="sheet-title" class="sheet-title"></div>
+    <button id="sheet-edit" class="sheet-btn">수정</button>
+    <button id="sheet-delete" class="sheet-btn danger">삭제</button>
+    <button class="sheet-btn" data-close-modal>취소</button>
+  </div>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="js/data.js"></script>
+<script src="js/calc.js"></script>
+<script src="js/store.js"></script>
+<script src="js/quotes.js"></script>
+<script src="js/chart.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
