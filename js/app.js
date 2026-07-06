@@ -12,6 +12,7 @@
   var calcHoldingId = null;        // S04 대상 종목
   var calcMode = 'price';          // 'price' | 'rate'
   var refreshTimer = null;
+  var detailNewsSeq = 0;           // 종목 상세 뉴스 비동기 응답의 최신성 체크용
 
   /* ================= 공통 유틸 ================= */
 
@@ -57,10 +58,15 @@
   function refreshAll(silent) {
     var btn = $('#btn-refresh');
     btn.classList.add('spinning');
-    return Quotes.refreshAll().then(function () {
+    return Quotes.refreshAll().then(function (result) {
       btn.classList.remove('spinning');
       renderAll();
-      if (!silent) toast('시세·환율·브리핑을 갱신했습니다.');
+      var warnings = (result && result.warnings) || [];
+      if (warnings.length) {
+        toast(warnings[0] + (warnings.length > 1 ? ' 외 ' + (warnings.length - 1) + '건' : ''));
+      } else if (!silent) {
+        toast('시세·환율·브리핑을 갱신했습니다.');
+      }
     }).catch(function (err) {
       btn.classList.remove('spinning');
       renderAll(); // 마지막 성공 데이터 유지 (가용성)
@@ -144,6 +150,16 @@
     return String(s).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
+  }
+
+  /* 뉴스 항목 렌더링 — url이 있으면 링크, 없으면(데모 시장뉴스 등) 일반 블록 */
+  function renderNewsItem(n) {
+    var el = document.createElement(n.url ? 'a' : 'div');
+    el.className = 'news-item';
+    if (n.url) { el.href = n.url; el.target = '_blank'; el.rel = 'noopener'; }
+    el.innerHTML = '<div class="news-headline">' + escapeHtml(n.headline) + '</div>' +
+      '<div class="news-meta">' + escapeHtml(n.source) + (n.publishedAt ? ' · ' + fmtTime(n.publishedAt) : '') + '</div>';
+    return el;
   }
 
   /* 롱프레스 → 수정/삭제 액션시트 (F01) */
@@ -330,18 +346,14 @@
         : (chartData.isKR ? '장중 09:00~15:30' : '미국 정규장 (프리마켓 제외)'));
     drawIntradayChart($('#detail-chart'), chartData, h.currency);
 
-    // 관련 뉴스 3건
+    // 관련 뉴스 3건 (실시간 모드에서는 Google News 비동기 조회)
     var newsWrap = $('#detail-news');
-    newsWrap.innerHTML = '';
-    Quotes.getNews(h).forEach(function (n) {
-      var a = document.createElement('a');
-      a.className = 'news-item';
-      a.href = n.url;
-      a.target = '_blank';
-      a.rel = 'noopener';
-      a.innerHTML = '<div class="news-headline">' + escapeHtml(n.headline) + '</div>' +
-        '<div class="news-meta">' + escapeHtml(n.source) + ' · ' + fmtTime(n.publishedAt) + '</div>';
-      newsWrap.appendChild(a);
+    newsWrap.innerHTML = '<div class="news-empty">뉴스 불러오는 중...</div>';
+    var newsReqId = ++detailNewsSeq;
+    Quotes.getNews(h).then(function (newsList) {
+      if (newsReqId !== detailNewsSeq) return; // 그 사이 다른 종목으로 이동했으면 무시
+      newsWrap.innerHTML = '';
+      newsList.forEach(function (n) { newsWrap.appendChild(renderNewsItem(n)); });
     });
 
     // 하단 물타기 버튼 분기 (3.3): 수익 구간이면 그레이아웃, 탭 시 안내만
@@ -462,37 +474,32 @@
     fillTable($('#briefing-indices'), b && b.indices);
     fillTable($('#briefing-indices-more'), b && b.more);
 
-    // 보유종목 관련 뉴스 (전체 시장 뉴스와 분리 — F07)
+    // 보유종목 관련 뉴스 (전체 시장 뉴스와 분리 — F07). 실시간 모드에서는 Google News 비동기 조회
     var hw = $('#briefing-holding-news');
-    hw.innerHTML = '';
     if (!Store.state.holdings.length) {
       hw.innerHTML = '<div class="news-empty">보유 종목이 없습니다.</div>';
     } else {
-      Store.state.holdings.slice(0, 5).forEach(function (h) {
-        var n = Quotes.getNews(h)[0];
-        var a = document.createElement('a');
-        a.className = 'news-item';
-        a.href = n.url; a.target = '_blank'; a.rel = 'noopener';
-        a.innerHTML = '<div class="news-headline">' + escapeHtml(n.headline) + '</div>' +
-          '<div class="news-meta">' + escapeHtml(h.name) + ' · ' + escapeHtml(n.source) + ' · ' + fmtTime(n.publishedAt) + '</div>';
-        hw.appendChild(a);
+      hw.innerHTML = '<div class="news-empty">뉴스 불러오는 중...</div>';
+      var briefingReqId = ++detailNewsSeq;
+      Promise.all(Store.state.holdings.slice(0, 5).map(function (h) {
+        return Quotes.getNews(h).then(function (list) { return { h: h, n: list[0] }; });
+      })).then(function (pairs) {
+        if (briefingReqId !== detailNewsSeq) return;
+        hw.innerHTML = '';
+        pairs.forEach(function (p) {
+          if (!p.n) return;
+          var n = Object.assign({}, p.n, { source: p.h.name + ' · ' + p.n.source });
+          hw.appendChild(renderNewsItem(n));
+        });
       });
     }
 
-    // 시장 전체 뉴스 (샘플)
+    // 시장 전체 뉴스 — 실시간 모드에서는 국내 증시 시황 검색, 데모 모드에서는 샘플
     var mw = $('#briefing-market-news');
-    mw.innerHTML = '';
-    var marketNews = [
-      { h: '[샘플] 미 증시, 기술주 강세 속 혼조 마감… 나스닥 최고치 경신', s: '샘플뉴스' },
-      { h: '[샘플] 한은 기준금리 동결 전망 우세… 환율 변동성 주시', s: '샘플뉴스' },
-      { h: '[샘플] 반도체 수출 호조 지속, 7월 수출입 동향 발표 예정', s: '샘플뉴스' }
-    ];
-    marketNews.forEach(function (n) {
-      var d = document.createElement('div');
-      d.className = 'news-item';
-      d.innerHTML = '<div class="news-headline">' + escapeHtml(n.h) + '</div>' +
-        '<div class="news-meta">' + n.s + ' (뉴스 API 연동 필요)</div>';
-      mw.appendChild(d);
+    mw.innerHTML = '<div class="news-empty">뉴스 불러오는 중...</div>';
+    Quotes.getMarketNews().then(function (items) {
+      mw.innerHTML = '';
+      items.forEach(function (n) { mw.appendChild(renderNewsItem(n)); });
     });
   }
 
@@ -502,6 +509,7 @@
     var s = Store.state.settings;
     $('#set-refresh-interval').value = String(s.autoRefreshMin);
     $('#set-demo-mode').checked = !!s.demoMode;
+    $('#set-av-key').value = s.alphaVantageKey || '';
     $('#set-fx-rate').value = s.fxRate;
     $('#set-notify').checked = !!s.notify;
   }
@@ -523,6 +531,10 @@
       Store.state.settings.demoMode = this.checked;
       Store.save();
       toast(this.checked ? '데모 시세 모드 켜짐' : '데모 시세 모드 꺼짐 — 실API 연동 전까지 시세가 갱신되지 않습니다.');
+    });
+    $('#set-av-key').addEventListener('change', function () {
+      Store.state.settings.alphaVantageKey = this.value.trim();
+      Store.save();
     });
     $('#set-fx-rate').addEventListener('change', function () {
       var v = parseFloat(this.value);

@@ -1,9 +1,11 @@
 /* F03 시세 서비스 레이어
-   ─ 기획서 7장: 실시세/뉴스/환율 API는 계약·비용 확정 전 [확인 필요] 상태.
-   ─ 따라서 기본은 '데모 시세 프로바이더'(결정적 시뮬레이션)이며,
-     실서비스 연동 시 아래 fetchRealQuote / fetchRealNews / fetchRealBriefing 만 구현하면 된다.
-   후보: 국내(한국투자증권 오픈API, 키움 OpenAPI+, KRX), 해외(Polygon.io, Alpha Vantage, Finnhub),
-         환율(한국수출입은행 API), 뉴스(네이버/다음 금융, Benzinga, Finnhub) */
+   ─ 설정 화면의 '데모 시세 모드'를 끄면 실시세를 사용한다:
+     국내(KR/국내ETF) → 네이버 금융 모바일 API, Netlify Functions 프록시(netlify/functions/naver-quote.js) 경유
+       (비공식/undocumented 엔드포인트라 키는 불필요하지만, 네이버가 구조를 바꾸면 깨질 수 있음 — 1인 개인용 전제.
+        더 안정적인 공식 연동이 필요해지면 netlify/functions/kis-quote.js(한국투자증권 오픈API)로 교체 가능)
+     해외(US/해외ETF) + 환율(F10) → Alpha Vantage (CORS 지원, 브라우저에서 직접 호출, API 키 필요)
+   ─ 모닝 브리핑 지수(코스피 등)와 당일 분봉(F06)은 별도 API 미선정 상태라
+     실시간 모드에서도 데모 데이터를 유지한다 (기획서 7장 [확인 필요]). */
 
 var Quotes = (function () {
 
@@ -110,7 +112,7 @@ var Quotes = (function () {
     return { series: series, prevClose: snap.prevClose, closed: sess.closed, preOpen: preOpen, sessionLabel: sess.label, isKR: isKR };
   }
 
-  /* ---------- 종목 뉴스 (F06: 최신 3건) — 실API 연동 전 샘플 + 원문 링크 ---------- */
+  /* ---------- 종목 뉴스 (F06: 최신 3건) — 데모 샘플 + 원문 링크 ---------- */
   function newsLinkFor(holding) {
     if (isKoreanTicker(holding.ticker)) {
       return 'https://m.stock.naver.com/domestic/stock/' + holding.ticker + '/news';
@@ -136,6 +138,48 @@ var Quotes = (function () {
     });
   }
 
+  function demoMarketNews() {
+    return [
+      { headline: '[샘플] 미 증시, 기술주 강세 속 혼조 마감… 나스닥 최고치 경신', source: '샘플뉴스 (뉴스 API 미연동)', publishedAt: null, url: null },
+      { headline: '[샘플] 한은 기준금리 동결 전망 우세… 환율 변동성 주시', source: '샘플뉴스 (뉴스 API 미연동)', publishedAt: null, url: null },
+      { headline: '[샘플] 반도체 수출 호조 지속, 7월 수출입 동향 발표 예정', source: '샘플뉴스 (뉴스 API 미연동)', publishedAt: null, url: null }
+    ];
+  }
+
+  /* ---------- 실API: 뉴스 (Google News RSS, Netlify Functions 프록시 — API 키 불필요) ---------- */
+  function fetchGoogleNews(query, limit, locale) {
+    var qp = 'q=' + encodeURIComponent(query) + '&limit=' + (limit || 3);
+    if (locale) qp += '&hl=' + encodeURIComponent(locale.hl) + '&gl=' + encodeURIComponent(locale.gl) + '&ceid=' + encodeURIComponent(locale.ceid);
+    return fetch('/.netlify/functions/news?' + qp)
+      .then(function (res) {
+        if (!res.ok) throw new Error('뉴스 프록시 호출 실패 (' + res.status + ')');
+        return res.json();
+      })
+      .then(function (data) { return data.items || []; });
+  }
+
+  /* 종목 관련 뉴스: 데모 모드면 샘플, 실시간 모드면 종목명으로 Google News 검색 (실패/결과없음 시 샘플로 폴백) */
+  function getNews(holding) {
+    if (Store.state.settings.demoMode) return Promise.resolve(demoNews(holding));
+    var locale = isKrMarket(holding) ? { hl: 'ko', gl: 'KR', ceid: 'KR:ko' } : { hl: 'en-US', gl: 'US', ceid: 'US:en' };
+    return fetchGoogleNews(holding.name, 3, locale)
+      .then(function (items) {
+        if (!items.length) return demoNews(holding);
+        return items.map(function (it) {
+          return { ticker: holding.ticker, headline: it.headline, source: it.source, publishedAt: it.publishedAt || Date.now(), url: it.url };
+        });
+      })
+      .catch(function () { return demoNews(holding); });
+  }
+
+  /* 시장 전체 뉴스 (F07 모닝 브리핑): 데모 모드면 샘플, 실시간 모드면 국내 증시 시황 검색 */
+  function getMarketNews() {
+    if (Store.state.settings.demoMode) return Promise.resolve(demoMarketNews());
+    return fetchGoogleNews('코스피 증시 시황', 3, { hl: 'ko', gl: 'KR', ceid: 'KR:ko' })
+      .then(function (items) { return items.length ? items : demoMarketNews(); })
+      .catch(function () { return demoMarketNews(); });
+  }
+
   /* ---------- 모닝 브리핑 데이터 (F07) ---------- */
   function demoBriefing() {
     var rnd = mulberry32(hashStr('briefing|' + dateKey()));
@@ -154,40 +198,115 @@ var Quotes = (function () {
     };
   }
 
-  /* ---------- 실서비스 연동 지점 (API 확정 후 구현) ---------- */
-  function fetchRealQuote(holding) {
-    // TODO: 한국투자증권/키움/Polygon 등 확정된 API 호출로 교체
-    return Promise.reject(new Error('시세 API 미연동'));
-  }
-  function fetchRealNews(holding) {
-    return Promise.reject(new Error('뉴스 API 미연동'));
-  }
-  function fetchRealBriefing() {
-    return Promise.reject(new Error('시황 API 미연동'));
+  /* ---------- 실API: 국내 (네이버 금융 모바일 API, 키 불필요 — Netlify Functions 프록시로 CORS만 우회) ---------- */
+  function isKrMarket(h) {
+    return h.market === 'KR' || (h.market === 'ETF' && isKoreanTicker(h.ticker));
   }
 
+  function fetchNaverQuotes(tickers) {
+    return fetch('/.netlify/functions/naver-quote?tickers=' + tickers.join(','))
+      .then(function (res) {
+        if (!res.ok) throw new Error('프록시 호출 실패 (' + res.status + ') — Netlify 배포 여부를 확인하세요.');
+        return res.json();
+      })
+      .then(function (payload) { return payload.results || []; });
+  }
+
+  /* ---------- 실API: 해외 + 환율 (Alpha Vantage) ---------- */
+  function fetchAlphaVantageQuote(ticker, apiKey) {
+    var url = 'https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=' + encodeURIComponent(ticker) + '&apikey=' + encodeURIComponent(apiKey);
+    return fetch(url).then(function (res) { return res.json(); }).then(function (data) {
+      var q = data['Global Quote'];
+      if (!q || !q['05. price']) {
+        throw new Error(data['Note'] || data['Information'] || data['Error Message'] || (ticker + ' 시세 없음'));
+      }
+      var current = parseFloat(q['05. price']);
+      var prevClose = parseFloat(q['08. previous close']);
+      var changePct = parseFloat((q['10. change percent'] || '').replace('%', ''));
+      return {
+        currentPrice: current,
+        prevClose: prevClose,
+        changeRate: isNaN(changePct) ? (prevClose ? (current - prevClose) / prevClose * 100 : 0) : changePct,
+        timestamp: Date.now(),
+        delayed: false
+      };
+    });
+  }
+
+  function fetchAlphaVantageFx(apiKey) {
+    var url = 'https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=USD&to_currency=KRW&apikey=' + encodeURIComponent(apiKey);
+    return fetch(url).then(function (res) { return res.json(); }).then(function (data) {
+      var r = data['Realtime Currency Exchange Rate'];
+      if (!r) throw new Error(data['Note'] || data['Information'] || '환율 조회 실패');
+      return parseFloat(r['5. Exchange Rate']);
+    });
+  }
+
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
   /* ---------- 전체 새로고침 (F08): 시세 + 환율 + 브리핑 재수집 ----------
-     실패 시 마지막 성공 데이터 유지 (비기능 '가용성') */
+     실패 시 마지막 성공 데이터 유지 (비기능 '가용성').
+     데모 모드가 꺼져 있으면 국내는 KIS 프록시(배치 1회), 해외는 Alpha Vantage(순차 호출,
+     무료 티어 분당 5회 제한 고려)로 실시세를 가져온다. */
   function refreshAll() {
-    var demo = Store.state.settings.demoMode;
-    return new Promise(function (resolve, reject) {
-      setTimeout(function () { // 네트워크 지연 시뮬레이션
-        if (!demo) {
-          reject(new Error('시세 API가 아직 연동되지 않았습니다. 마지막 데이터를 유지합니다. (설정에서 데모 모드를 켜면 시뮬레이션 시세를 사용합니다)'));
-          return;
-        }
-        Store.state.holdings.forEach(function (h) {
-          Store.setSnapshot(h.ticker, demoQuote(h));
-        });
-        // 환율도 브리핑 지표에서 동기화 (F10)
+    return Store.state.settings.demoMode ? refreshAllDemo() : refreshAllReal();
+  }
+
+  function refreshAllDemo() {
+    return new Promise(function (resolve) {
+      setTimeout(function () {
+        Store.state.holdings.forEach(function (h) { Store.setSnapshot(h.ticker, demoQuote(h)); });
         var briefing = demoBriefing();
         var fx = briefing.indices.filter(function (x) { return x.key === 'USDKRW'; })[0];
         if (fx) Store.state.settings.fxRate = Math.round(fx.value * 10) / 10;
         Store.state.briefing = briefing;
         Store.state.lastRefreshedAt = Date.now();
         Store.save();
-        resolve();
+        resolve({ warnings: [] });
       }, 350);
+    });
+  }
+
+  function refreshAllReal() {
+    var warnings = [];
+    var holdings = Store.state.holdings;
+    var krTickers = holdings.filter(isKrMarket).map(function (h) { return h.ticker; });
+    var usHoldings = holdings.filter(function (h) { return !isKrMarket(h); });
+    var apiKey = Store.state.settings.alphaVantageKey;
+
+    var krStep = krTickers.length
+      ? fetchNaverQuotes(krTickers).then(function (results) {
+          results.forEach(function (r) {
+            if (r.error) { warnings.push(r.ticker + ': ' + r.error); return; }
+            Store.setSnapshot(r.ticker, r);
+          });
+        }).catch(function (e) { warnings.push('국내주식 시세 조회 실패: ' + e.message); })
+      : Promise.resolve();
+
+    var usStep = krStep.then(function () {
+      if (!usHoldings.length) return;
+      if (!apiKey) { warnings.push('해외주식 시세 조회 불가 — 설정에서 Alpha Vantage API 키를 입력하세요.'); return; }
+      var chain = Promise.resolve();
+      usHoldings.forEach(function (h, i) {
+        chain = chain.then(function () {
+          return fetchAlphaVantageQuote(h.ticker, apiKey)
+            .then(function (snap) { Store.setSnapshot(h.ticker, snap); })
+            .catch(function (e) { warnings.push(h.ticker + ': ' + e.message); })
+            .then(function () { return sleep(900); }); // 마지막 종목 이후에도 대기 — 뒤이은 환율 호출이 분당/초당 제한에 걸리지 않도록
+        });
+      });
+      return chain.then(function () {
+        return fetchAlphaVantageFx(apiKey)
+          .then(function (fx) { if (fx) Store.state.settings.fxRate = Math.round(fx * 10) / 10; })
+          .catch(function (e) { warnings.push('환율 조회 실패: ' + e.message); });
+      });
+    });
+
+    return usStep.then(function () {
+      Store.state.briefing = demoBriefing(); // 지수 API 미선정 — 데모 데이터 유지
+      Store.state.lastRefreshedAt = Date.now();
+      Store.save();
+      return { warnings: warnings };
     });
   }
 
@@ -203,7 +322,8 @@ var Quotes = (function () {
     refreshAll: refreshAll,
     needsMorningRefresh: needsMorningRefresh,
     getIntraday: demoIntraday,
-    getNews: demoNews,
+    getNews: getNews,
+    getMarketNews: getMarketNews,
     newsLinkFor: newsLinkFor,
     sessionProgress: sessionProgress
   };

@@ -9,9 +9,10 @@ var Store = {
     briefing: null,      // MorningBriefing: {date, indices[], more[], lastRefreshedAt}
     calcLogs: [],        // DilutionCalc 계산 이력 (선택 기능)
     settings: {
-      autoRefreshMin: 0, // 자동 새로고침 주기(분), 0=사용 안 함
-      demoMode: true,    // 실시세 API 연동 전 데모 시세
-      fxRate: 1375.0,    // USD/KRW (F10)
+      autoRefreshMin: 0,   // 자동 새로고침 주기(분), 0=사용 안 함
+      demoMode: true,      // 끄면 실시세 사용 (국내: KIS 프록시, 해외: Alpha Vantage)
+      fxRate: 1375.0,      // USD/KRW (F10) — 실시간 모드에서는 Alpha Vantage로 자동 갱신
+      alphaVantageKey: '', // 해외주식·환율 조회용 (alphavantage.co 무료 발급)
       notify: false
     },
     lastRefreshedAt: null
@@ -24,7 +25,7 @@ var Store = {
         var saved = JSON.parse(raw);
         // 얕은 병합으로 새 설정 필드 기본값 유지
         Store.state = Object.assign({}, Store.state, saved);
-        Store.state.settings = Object.assign({}, { autoRefreshMin: 0, demoMode: true, fxRate: 1375.0, notify: false }, saved.settings || {});
+        Store.state.settings = Object.assign({}, { autoRefreshMin: 0, demoMode: true, fxRate: 1375.0, alphaVantageKey: '', notify: false }, saved.settings || {});
       }
     } catch (e) { /* 손상된 데이터면 초기 상태 유지 */ }
   },

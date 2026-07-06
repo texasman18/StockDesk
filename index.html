@@ -117,13 +117,20 @@
         </select>
       </label>
       <label class="settings-row">
-        <span>데모 시세 모드<br><small>실제 시세 API 연동 전 시뮬레이션 시세 사용</small></span>
+        <span>데모 시세 모드<br><small>끄면 실시세 사용 (국내: 네이버 금융 / 해외: Alpha Vantage)</small></span>
         <input type="checkbox" id="set-demo-mode">
       </label>
       <label class="settings-row">
-        <span>환율 (USD/KRW)<br><small>해외주식 원화 환산에 사용 (F10)</small></span>
+        <span>Alpha Vantage API 키<br><small>해외주식·ETF·환율 조회용 — <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener">무료 발급</a></small></span>
+        <input type="text" id="set-av-key" placeholder="API 키 입력" autocomplete="off" autocapitalize="off">
+      </label>
+      <label class="settings-row">
+        <span>환율 (USD/KRW)<br><small>해외주식 원화 환산에 사용 (F10). 실시간 모드에서는 자동 갱신됨</small></span>
         <input type="number" id="set-fx-rate" class="num" step="0.1" min="1" inputmode="decimal">
       </label>
+      <div class="settings-note">
+        국내주식 시세는 네이버 금융 비공식 API를 씁니다 — 키 발급은 필요 없지만 Netlify Functions 배포 후에만 동작합니다(로컬 http.server에서는 404). 네이버가 구조를 바꾸면 일시적으로 안 될 수 있습니다. 배포 전이거나 오류 시 새로고침에서 안내 메시지가 뜨며 마지막 데이터가 유지됩니다. 자세한 내용은 README 참고.
+      </div>
     </div>
 
     <div class="settings-group">
