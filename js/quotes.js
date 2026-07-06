@@ -5,9 +5,13 @@
         더 안정적인 공식 연동이 필요해지면 netlify/functions/kis-quote.js(한국투자증권 오픈API)로 교체 가능)
      해외(US/해외ETF) + 환율(F10) → Alpha Vantage (CORS 지원, 브라우저에서 직접 호출, API 키 필요)
    ─ 모닝 브리핑 지수(코스피 등)와 당일 분봉(F06)은 별도 API 미선정 상태라
-     실시간 모드에서도 데모 데이터를 유지한다 (기획서 7장 [확인 필요]). */
+     실시간 모드에서도 데모 데이터를 유지한다 (기획서 7장 [확인 필요]).
+   ─ 앱 자체는 GitHub Pages 등 순수 정적 호스팅에 배포하되, naver-quote/news 프록시만은
+     Netlify Functions가 필요하므로 PROXY_BASE에 지정된 Netlify 사이트를 API 백엔드로 그대로 호출한다
+     (해당 함수들은 access-control-allow-origin: * 로 CORS를 열어뒀으므로 다른 도메인에서도 호출 가능). */
 
 var Quotes = (function () {
+  var PROXY_BASE = 'https://stockdesk-lsj.netlify.app'; // Netlify Functions 백엔드 (naver-quote, news) — 정적 사이트가 다른 도메인이어도 CORS로 호출 가능
 
   /* ---------- 시드 기반 난수 (같은 날 같은 종목 → 일관된 데모 시세) ---------- */
   function hashStr(s) {
@@ -150,7 +154,7 @@ var Quotes = (function () {
   function fetchGoogleNews(query, limit, locale) {
     var qp = 'q=' + encodeURIComponent(query) + '&limit=' + (limit || 3);
     if (locale) qp += '&hl=' + encodeURIComponent(locale.hl) + '&gl=' + encodeURIComponent(locale.gl) + '&ceid=' + encodeURIComponent(locale.ceid);
-    return fetch('/.netlify/functions/news?' + qp)
+    return fetch(PROXY_BASE + '/.netlify/functions/news?' + qp)
       .then(function (res) {
         if (!res.ok) throw new Error('뉴스 프록시 호출 실패 (' + res.status + ')');
         return res.json();
@@ -204,7 +208,7 @@ var Quotes = (function () {
   }
 
   function fetchNaverQuotes(tickers) {
-    return fetch('/.netlify/functions/naver-quote?tickers=' + tickers.join(','))
+    return fetch(PROXY_BASE + '/.netlify/functions/naver-quote?tickers=' + tickers.join(','))
       .then(function (res) {
         if (!res.ok) throw new Error('프록시 호출 실패 (' + res.status + ') — Netlify 배포 여부를 확인하세요.');
         return res.json();

@@ -14,6 +14,17 @@ python3 -m http.server 8080
 
 아이폰에서 사용: 같은 Wi-Fi에서 `http://<맥의IP>:8080` 접속 → Safari 공유 → **홈 화면에 추가** 하면 전체화면 앱처럼 실행됩니다. (iPhone 17 Air 해상도 기준 최적화, 320~520px 유동 대응)
 
+## 실제 배포 구조 — GitHub Pages(정적 사이트) + Netlify(API 백엔드 전용)
+
+실제 서비스 사이트는 **https://texasman18.github.io/StockDesk/** (GitHub Pages, 정적 호스팅)입니다.
+
+GitHub Pages는 서버리스 함수를 실행할 수 없어서, `netlify/functions/`의 프록시(네이버 시세, Google News)는 GitHub Pages에서 직접 돌지 않습니다. 대신 [js/quotes.js](js/quotes.js) 상단의 `PROXY_BASE` 상수(`https://stockdesk-lsj.netlify.app`)가 가리키는 **별도의 Netlify 사이트를 API 백엔드로만** 크로스오리진 호출합니다 — 두 프록시 함수 모두 `access-control-allow-origin: *`로 CORS를 열어뒀기 때문에 다른 도메인(GitHub Pages)에서도 정상 호출됩니다.
+
+- **프론트엔드(정적 파일)**: GitHub Pages, `texasman18/StockDesk` 저장소에서 배포 — 배포는 저장소 소유자가 직접 관리
+- **API 백엔드(Netlify Functions만)**: `stockdesk-lsj.netlify.app` — `naver-quote`, `news` 함수만 호스팅하는 용도, 이 사이트 자체를 볼 일은 없음
+- 이 로컬 폴더가 실제 배포 저장소(git)에 연결되어 있지 않으므로, 코드를 수정한 뒤에는 **`texasman18/StockDesk` GitHub 저장소에 수동으로 반영(커밋/푸시 또는 파일 업로드)해야 실제 사이트에 반영됩니다.**
+- `PROXY_BASE`를 바꾸고 싶으면(예: 본인 소유의 다른 Netlify 사이트로 교체) `js/quotes.js` 상단 값만 바꾸면 됩니다.
+
 ## 기능 구현 현황 (기획서 Feature Map 대비)
 
 | 코드 | 기능 | 상태 |
