@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DtoD 야자버스 도입 제안서 — Ciel Mobility</title>
+<style>
+:root{
+  --ink:#101510; --ink2:#1C241B; --ink3:#232D22;
+  --paper:#FAFAF7; --card:#EDEFE8; --card-line:#DDE1D6;
+  --lime:#9AE864; --lime-deep:#3E7A1E; --lime-tint:#E4F5D4;
+  --mut:#A8B5A2; --mut-l:#6B7566;
+  --red:#E8574A; --red-deep:#C0392B; --scrap-bg:#141419; --scrap-card:#1E1E26;
+  --page:#E7E9E2; --chrome-ink:#101510;
+  --radius:20px;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --page:#0A0D09; --chrome-ink:#F2F4EF; }
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+body{
+  font-family:"Apple SD Gothic Neo","Pretendard",-apple-system,BlinkMacSystemFont,"Malgun Gothic","맑은 고딕",sans-serif;
+  background:var(--page); color:var(--ink);
+  -webkit-font-smoothing:antialiased; line-height:1.5;
+}
+/* ---------- chrome ---------- */
+.topbar{
+  position:sticky; top:0; z-index:50; display:flex; align-items:center; gap:14px;
+  padding:10px 20px; background:color-mix(in srgb, var(--page) 82%, transparent);
+  backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  border-bottom:1px solid color-mix(in srgb, var(--chrome-ink) 12%, transparent);
+  color:var(--chrome-ink);
+}
+.topbar .logo{display:flex;align-items:center;gap:8px;font-weight:800;font-size:14px;letter-spacing:.02em;white-space:nowrap}
+.topbar .logo::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--lime);box-shadow:0 0 8px rgba(154,232,100,.8)}
+.topbar nav{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;flex:1}
+.topbar nav::-webkit-scrollbar{display:none}
+.topbar nav a{
+  font-size:12px;font-weight:700;color:inherit;opacity:.62;text-decoration:none;
+  padding:5px 10px;border-radius:999px;white-space:nowrap;
+}
+.topbar nav a:hover{opacity:1;background:color-mix(in srgb, var(--chrome-ink) 8%, transparent)}
+.counter{font-size:12px;font-weight:700;opacity:.6;font-variant-numeric:tabular-nums;white-space:nowrap}
+/* ---------- deck ---------- */
+.deck{max-width:1180px;margin:0 auto;padding:26px 16px 80px;display:flex;flex-direction:column;gap:26px}
+.slide{
+  position:relative;border-radius:var(--radius);overflow:hidden;
+  padding:clamp(26px,4.5vw,58px);
+  box-shadow:0 14px 42px rgba(10,16,8,.16);
+  min-height:min(62vw,660px);
+  display:flex;flex-direction:column;
+}
+.slide.light{background:var(--paper);color:var(--ink)}
+.slide.dark{background:linear-gradient(150deg,#131912 0%,#0E130D 100%);color:#F2F4EF}
+.slide.lime{background:linear-gradient(150deg,#A4EE70,#8FDF57);color:#14210F}
+.slide.scrap{background:linear-gradient(160deg,#16161C,#101014);color:#F1F1F3}
+.pageno{position:absolute;right:26px;bottom:18px;font-size:11px;font-weight:700;opacity:.45;font-variant-numeric:tabular-nums}
+.brand{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;margin-bottom:auto}
+.brand::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--lime)}
+.scrap .brand::before{background:var(--red)}
+.slide-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;gap:12px}
+.chip{font-size:11px;font-weight:800;background:var(--card);border:1px solid var(--card-line);border-radius:999px;padding:6px 16px;white-space:nowrap;box-shadow:0 2px 6px rgba(10,16,8,.08)}
+.dark .chip,.scrap .chip{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.12)}
+.eyebrow{font-size:12px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:var(--lime-deep);margin-bottom:10px}
+.dark .eyebrow{color:var(--lime)} .scrap .eyebrow{color:var(--red)} .lime .eyebrow{color:#2C5313}
+h1{font-size:clamp(26px,4.2vw,46px);font-weight:900;letter-spacing:-.02em;line-height:1.18}
+h2{font-size:clamp(20px,2.9vw,30px);font-weight:900;letter-spacing:-.015em;line-height:1.25;margin-bottom:6px}
+.sub{font-size:clamp(13px,1.5vw,16px);opacity:.72;font-weight:500}
+.body-wrap{flex:1;display:flex;flex-direction:column;justify-content:center;gap:20px}
+/* ---------- components ---------- */
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(2,1fr)} .g3{grid-template-columns:repeat(3,1fr)} .g4{grid-template-columns:repeat(4,1fr)} .g5{grid-template-columns:repeat(5,1fr)}
+@media (max-width:860px){ .g3,.g4{grid-template-columns:repeat(2,1fr)} .g5{grid-template-columns:repeat(2,1fr)} }
+@media (max-width:560px){ .g2,.g3,.g4{grid-template-columns:1fr} .slide{min-height:0} }
+.card{background:var(--card);border:1px solid var(--card-line);border-radius:16px;padding:20px 22px}
+.dark .card{background:rgba(255,255,255,.055);border-color:rgba(255,255,255,.09)}
+.card h3{font-size:16px;font-weight:800;margin-bottom:8px}
+.card p{font-size:13.5px;opacity:.78}
+.num-dot{display:inline-flex;width:26px;height:26px;border-radius:50%;background:var(--lime);color:#14210F;font-size:13px;font-weight:900;align-items:center;justify-content:center;margin-bottom:10px}
+.stat{border-radius:16px;padding:22px}
+.stat .v{font-size:clamp(30px,3.6vw,44px);font-weight:900;letter-spacing:-.02em;color:var(--lime)}
+.light .stat{background:var(--card);border:1px solid var(--card-line)}
+.light .stat .v{color:var(--lime-deep)}
+.dark .stat{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+.stat .l{font-size:14px;font-weight:800;margin-top:6px}
+.stat .d{font-size:12.5px;opacity:.66;margin-top:4px}
+.scrap .stat{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08)}
+.scrap .stat .v{color:var(--red)}
+ul.check{list-style:none;display:flex;flex-direction:column;gap:9px}
+ul.check li{position:relative;padding-left:24px;font-size:14px}
+ul.check li::before{content:"✓";position:absolute;left:0;font-weight:900;color:var(--lime-deep)}
+.dark ul.check li::before{color:var(--lime)}
+ul.dot{list-style:none;display:flex;flex-direction:column;gap:8px}
+ul.dot li{position:relative;padding-left:16px;font-size:13.5px;opacity:.85}
+ul.dot li::before{content:"•";position:absolute;left:2px;color:var(--lime-deep)}
+.dark ul.dot li::before{color:var(--lime)}
+.banner{border-radius:14px;padding:18px 26px;text-align:center;font-size:15px;font-weight:700;margin-top:auto}
+.light .banner{background:var(--ink);color:#F2F4EF}
+.light .banner b{color:var(--lime)}
+.dark .banner{background:var(--lime);color:#14210F}
+.banner.tint{background:var(--lime-tint);color:var(--ink);border:1px solid #CBE8AF}
+.banner.tint b{color:var(--lime-deep)}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--card-line)}
+th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;opacity:.6}
+.table-scroll{overflow-x:auto}
+td.r,th.r{text-align:right;font-variant-numeric:tabular-nums}
+.flow{display:flex;align-items:stretch;gap:10px;flex-wrap:wrap}
+.flow .step{flex:1;min-width:150px;border-radius:14px;padding:18px;background:var(--card);border:1px solid var(--card-line)}
+.dark .flow .step,.lime-flow .step{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.1)}
+.flow .arrow{align-self:center;font-size:20px;font-weight:900;opacity:.4}
+.step .t{font-weight:800;font-size:15px}
+.step .d{font-size:12.5px;opacity:.68;margin-top:4px}
+.step .k{font-size:11px;font-weight:800;letter-spacing:.14em;color:var(--lime-deep);text-transform:uppercase}
+.dark .step .k{color:var(--lime)}
+.ratebar{display:flex;align-items:center;gap:10px;font-size:13.5px}
+.ratebar .n{width:110px;font-weight:700;flex-shrink:0}
+.ratebar .track{flex:1;height:10px;border-radius:6px;background:var(--card-line);overflow:hidden}
+.ratebar .fill{height:100%;border-radius:6px;background:var(--lime);border:1px solid #7CC94B}
+.ratebar .s{width:34px;text-align:right;font-weight:800;color:var(--lime-deep);font-variant-numeric:tabular-nums}
+.pill{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.1em;padding:4px 10px;border-radius:999px;background:var(--lime-tint);color:var(--lime-deep);margin-bottom:8px}
+.dark .pill{background:rgba(154,232,100,.14);color:var(--lime)}
+.kdark{background:var(--ink2);color:#F2F4EF;border-radius:16px;padding:20px 22px}
+.kdark .k{font-size:11px;font-weight:800;letter-spacing:.14em;color:var(--lime);text-transform:uppercase}
+.kdark h4{font-size:15.5px;font-weight:800;margin:6px 0 4px}
+.kdark p{font-size:12.5px;opacity:.66}
+.split{display:grid;grid-template-columns:1.5fr 1fr;gap:20px}
+@media (max-width:860px){.split{grid-template-columns:1fr}}
+.quote{font-size:clamp(15px,1.9vw,19px);font-weight:700;line-height:1.6}
+.big-price{font-size:clamp(44px,6vw,74px);font-weight:900;letter-spacing:-.03em;color:var(--lime)}
+.big-price small{font-size:.42em;font-weight:800;color:#F2F4EF}
+.timeline{display:flex;flex-direction:column;gap:12px}
+.timeline .row{display:grid;grid-template-columns:86px 1fr;gap:14px;align-items:baseline;border-bottom:1px solid var(--card-line);padding-bottom:12px}
+.timeline .y{font-weight:900;color:var(--lime-deep);font-variant-numeric:tabular-nums}
+.dark .timeline .y{color:var(--lime)}
+.dark .timeline .row{border-color:rgba(255,255,255,.09)}
+.timeline .t{font-size:13.5px}
+/* scrap slide specifics */
+.scrap-grid{display:grid;grid-template-columns:1.15fr 1fr;gap:26px;flex:1}
+@media (max-width:860px){.scrap-grid{grid-template-columns:1fr}}
+.scrap h1 em{font-style:normal;color:var(--red)}
+.news{background:var(--scrap-card);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px 16px}
+.news .h{font-size:13.5px;font-weight:800;line-height:1.45}
+.news .s{font-size:11.5px;color:var(--red);margin-top:6px;opacity:.9}
+.scrap-banner{background:var(--red-deep);color:#fff;border-radius:14px;padding:16px 24px;font-size:14.5px;font-weight:700;margin-top:22px}
+.scrap-banner b{color:#FFD9D4}
+.footline{font-size:11px;opacity:.5;margin-top:8px}
+/* cover */
+.cover-flow{display:flex;gap:0;align-items:center;margin-top:30px;flex-wrap:wrap}
+.cover-flow .n{flex:1;min-width:140px;padding:16px 4px;border-top:1px solid rgba(255,255,255,.16);position:relative}
+.cover-flow .n::before{content:"";position:absolute;top:-5px;left:0;width:9px;height:9px;border-radius:50%;background:var(--lime)}
+.cover-flow .t{font-weight:800;font-size:14.5px}
+.cover-flow .d{font-size:12px;opacity:.62;margin-top:2px}
+@media print{
+  .topbar{display:none}
+  body{background:#fff}
+  .deck{max-width:none;padding:0;gap:0}
+  .slide{border-radius:0;box-shadow:none;min-height:0;page-break-after:always;height:190mm}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <span class="logo">Ciel Mobility · DtoD 야자버스</span>
+  <nav>
+    <a href="#s2">Ⅰ 요약</a><a href="#s4">Ⅱ 배경</a><a href="#s9">Ⅲ 제안</a><a href="#s14">Ⅳ 비용</a><a href="#s17">Ⅴ 효과</a><a href="#s21">Ⅵ 로드맵</a><a href="#s23">Ⅶ 회사</a><a href="#s29">Ⅷ 다음</a>
+  </nav>
+  <span class="counter" id="counter">01 / 31</span>
+</header>
+
+<main class="deck">
+
+<!-- 01 COVER -->
+<section class="slide dark" id="s1" data-n="01">
+  <div class="brand">Ciel Mobility <span style="margin-left:auto;font-size:12px;opacity:.6;font-weight:600">제주특별자치도교육청 귀중</span></div>
+  <div class="body-wrap">
+    <div>
+      <div class="eyebrow">야간자율학습 안심 귀가버스 도입 제안서 · 2026. 07</div>
+      <h1 style="font-size:clamp(40px,6.4vw,72px)">DtoD <span style="color:var(--lime)">야자버스</span></h1>
+      <p class="sub" style="margin-top:12px"><b style="opacity:1">학생 귀가 안전 = 교육의 완성</b> &nbsp;—&nbsp; Door-to-Door 스마트 안전 플랫폼</p>
+    </div>
+    <div class="cover-flow">
+      <div class="n"><div class="t">학교 출발</div><div class="d">야자 종료 22:00</div></div>
+      <div class="n"><div class="t">탑승 확인</div><div class="d">학생증·QR 태그</div></div>
+      <div class="n"><div class="t">실시간 추적</div><div class="d">GPS·학부모 알림</div></div>
+      <div class="n"><div class="t">집 앞 하차</div><div class="d">어두운 도보 ZERO</div></div>
+    </div>
+  </div>
+  <div style="font-size:12px;opacity:.55">주식회사 Ciel Mobility &nbsp; 신사업실 이석진 이사 &nbsp;·&nbsp; 2026년 7월</div>
+  <span class="pageno">01 / 31</span>
+</section>
+
+<!-- 02 EXEC SUMMARY -->
+<section class="slide light" id="s2" data-n="02">
+  <div class="slide-head">
+    <div><div class="eyebrow">Executive Summary</div><h2>한눈에 보는 DtoD 야자버스 제안</h2></div>
+    <span class="chip">Ⅰ. 핵심 제안 요약</span>
+  </div>
+  <div class="split body-wrap" style="align-items:stretch">
+    <div class="grid g2">
+      <div class="card"><span class="num-dot">1</span><h3>핵심 문제</h3><p>심야 귀갓길은 안전 사각지대 — 광주 사건으로 확인된 위험이 제주에도 그대로 상존</p></div>
+      <div class="card"><span class="num-dot">2</span><h3>제안 솔루션</h3><p>GPS 실시간 위치·탑승/하차 알림·학부모 앱을 연동한 Door-to-Door 안심 귀가버스</p></div>
+      <div class="card"><span class="num-dot">3</span><h3>시범 계획</h3><p>제주시내 권역(고교 밀집·심야 배차 단절) — 차량 1대 × 3개월 유상 시범운영(POC)</p></div>
+      <div class="card"><span class="num-dot">4</span><h3>비용 구조</h3><p>차량 1대 월 500만 원(연 6,000만 원) All-in-One 단일 계약 — 행정 창구 1개</p></div>
+      <div class="card"><span class="num-dot">5</span><h3>기대 KPI</h3><p>3개월 내 학부모 만족도 85% · 탑승률 60% · 민원 50% 감소 · 안전사고 0건</p></div>
+      <div class="card"><span class="num-dot">6</span><h3>제안 기관</h3><p>GS 1등급·조달청 우수제품 — 인천교육청·삼성전자·카카오 운영 실적 14년</p></div>
+    </div>
+    <div class="kdark" style="display:flex;flex-direction:column;gap:16px;padding:26px">
+      <div class="k">Our Request</div>
+      <h3 style="font-size:19px;font-weight:900">교육청에 요청드리는 사항</h3>
+      <div><span class="pill" style="background:rgba(154,232,100,.14);color:var(--lime)">1</span><div style="font-weight:800">POC 시범사업 승인</div><p>제주시내 권역 · 차량 1대 × 3개월</p></div>
+      <div><span class="pill" style="background:rgba(154,232,100,.14);color:var(--lime)">2</span><div style="font-weight:800">시범 예산 편성</div><p>총 1,500만 원 (All-in-One)</p></div>
+      <div><span class="pill" style="background:rgba(154,232,100,.14);color:var(--lime)">3</span><div style="font-weight:800">실무 협의 착수</div><p>노선·운영 조건 협의, 대상교 협조</p></div>
+      <div style="margin-top:auto;border-top:1px solid rgba(255,255,255,.12);padding-top:14px">
+        <div style="color:var(--lime);font-weight:800;font-size:14px">✓ 계약 체결 후 3개월 내 운행 시작</div>
+        <p>2026년 하반기 즉시 운영 가능</p>
+      </div>
+    </div>
+  </div>
+  <span class="pageno">02 / 31</span>
+</section>
+
+<!-- 03 TOC -->
+<section class="slide light" id="s3" data-n="03">
+  <div class="slide-head">
+    <div><div class="eyebrow">Contents</div><h2>목차</h2></div>
+    <span class="chip">목차</span>
+  </div>
+  <div class="grid g2 body-wrap" style="align-content:center">
+    <div class="card"><span class="pill">Ⅰ</span><h3>핵심 제안 요약</h3><p>제안 전체 요약 · 교육청 요청 사항</p></div>
+    <div class="card"><span class="pill">Ⅴ</span><h3>도입 효과</h3><p>3축 기대효과 · POC KPI · 담당자 성과 연계</p></div>
+    <div class="card"><span class="pill">Ⅱ</span><h3>배경 및 필요성</h3><p>심야 귀갓길 사건 · 야간 배차 단절 · 학부모 불안</p></div>
+    <div class="card"><span class="pill">Ⅵ</span><h3>단계별 로드맵</h3><p>POC 3개월 → 제주 전역 → 전국 벤치마킹 모델</p></div>
+    <div class="card"><span class="pill">Ⅲ</span><h3>제안 내용</h3><p>Door-to-Door 플랫폼 · 서비스 흐름 · POC 계획</p></div>
+    <div class="card"><span class="pill">Ⅶ</span><h3>제안기관 소개</h3><p>기업 현황 · 연혁 · 인증 · 특허 · 교육청 레퍼런스</p></div>
+    <div class="card"><span class="pill">Ⅳ</span><h3>비용 구조</h3><p>All-in-One 단가 · POC 예산 · 항목별 산정 근거</p></div>
+    <div class="card"><span class="pill">Ⅷ</span><h3>다음 단계</h3><p>즉시 실행 Action Plan · 문의 및 협의 창구</p></div>
+  </div>
+  <span class="pageno">03 / 31</span>
+</section>
+
+<!-- 04 SECTION II DIVIDER -->
+<section class="slide dark" id="s4" data-n="04">
+  <div class="brand">Ciel Mobility</div>
+  <div class="body-wrap">
+    <div>
+      <div class="eyebrow">Ⅱ</div>
+      <h1>배경 및 필요성</h1>
+      <p class="sub" style="margin-top:8px">야간 귀가 문제의 구조적 본질</p>
+    </div>
+    <div class="grid g3">
+      <div class="card"><div class="pill">22시 이후</div><h3>야간 버스 배차 단절</h3><p>귀가 시간대 버스가 사실상 없음</p></div>
+      <div class="card"><div class="pill">도보 20분+</div><h3>어두운 귀갓길 위험</h3><p>가로등 없는 길, 보행 사고 노출</p></div>
+      <div class="card"><div class="pill">매일 반복</div><h3>학부모 불안·픽업 부담</h3><p>위치 확인 불가, 생업 지장 픽업</p></div>
+    </div>
+  </div>
+  <span class="pageno">04 / 31</span>
+</section>
+
+<!-- 05 NEWS SCRAP -->
+<section class="slide scrap" id="s5" data-n="05">
+  <div style="display:flex;justify-content:space-between;gap:12px;font-size:12px;margin-bottom:22px;flex-wrap:wrap">
+    <span><b style="color:var(--red);letter-spacing:.22em">NEWS SCRAP</b> &nbsp;|&nbsp; <span style="opacity:.75">2026. 5. 5. (화) 00:10 경 · 광주 광산구 월계동 보행로</span></span>
+    <span style="opacity:.6">장윤기 사건 (광주 여고생 피살 사건)</span>
+  </div>
+  <div class="scrap-grid">
+    <div style="display:flex;flex-direction:column;gap:22px">
+      <h1 style="font-size:clamp(30px,4.6vw,52px)">새벽 0시 10분,<br><em>여고생의 귀갓길</em>은<br>집에 닿지 못했다</h1>
+      <p style="font-size:14px;line-height:1.75;opacity:.85">2026년 5월 5일 0시 10분경, 광주 광산구 월계동의 인적 드문 보행로에서 귀가하던 여고생(16)이 일면식 없는 장윤기(23)에게 살해당했다. 피해자를 구하려던 고교생(17)도 흉기에 다쳤다. 가해자는 두 달간 '우발적 범행'을 주장했지만, 7월 13일 법정에서 성폭행 목적의 납치·살인이었음을 인정했다. 초동수사 부실과 증거인멸 의혹으로 경찰 특별수사단과 검찰이 동시 수사에 착수하며 사건은 전 국민적 공분으로 번지고 있다.</p>
+      <div class="grid g4" style="gap:12px">
+        <div class="stat" style="padding:16px"><div class="v" style="font-size:clamp(22px,2.6vw,32px)">00:10</div><div class="d">심야 귀갓길에서<br>발생한 범행 시각</div></div>
+        <div class="stat" style="padding:16px"><div class="v" style="font-size:clamp(22px,2.6vw,32px)">16세</div><div class="d">집으로 걸어가던<br>피해 여고생</div></div>
+        <div class="stat" style="padding:16px"><div class="v" style="font-size:clamp(22px,2.6vw,32px)">2개월</div><div class="d">범행 목적을 부인,<br>블랙박스에 결국 자백</div></div>
+        <div class="stat" style="padding:16px"><div class="v" style="font-size:clamp(22px,2.6vw,32px)">41명</div><div class="d">부실수사 규명<br>경찰 특별수사단 규모</div></div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="font-size:13px;font-weight:800;letter-spacing:.08em">언론 보도 스크랩</div>
+      <div class="news"><div class="h">“여고생 살해” 장윤기, 범행 2개월 만에 '성범죄 의도' 자백</div><div class="s">연합뉴스 · 2026. 7. 13.</div></div>
+      <div class="news"><div class="h">피해자 유족 “악마 같은 자에게 사형 선고해 달라”</div><div class="s">조선일보 · 2026. 7. 13.</div></div>
+      <div class="news"><div class="h">장윤기 성범죄 자백, 책임 더 커진 경찰 '부실 수사'</div><div class="s">연합뉴스 · 2026. 7. 13.</div></div>
+      <div class="news"><div class="h">경찰, '장윤기 사건 특별수사단'으로 확대…41명 규모</div><div class="s">연합뉴스 · 2026. 7. 11.</div></div>
+      <div class="footline">출처: 연합뉴스·조선일보·뉴시스·KBS 등 2026. 7. 11.~13. 보도 종합</div>
+    </div>
+  </div>
+  <div class="scrap-banner">심야 귀갓길 ‘마지막 도보 구간’은 안전 사각지대 — <b>DtoD 야자버스의 집 앞 하차가 이 비극을 예방합니다.</b></div>
+  <span class="pageno">05 / 31</span>
+</section>
+
+<!-- 06 WHY THIS MUST SUCCEED -->
+<section class="slide light" id="s6" data-n="06">
+  <div class="slide-head">
+    <div><div class="eyebrow">Why This Must Succeed</div><h2>사건 이후 — 이 제안이 반드시 성공해야 하는 이유</h2></div>
+    <span class="chip">Ⅱ. 배경 및 필요성</span>
+  </div>
+  <div class="grid g3 body-wrap" style="align-content:center">
+    <div class="card"><span class="num-dot">1</span><h3>심야 귀가, 국민적 의제화</h3>
+      <ul class="dot"><li>광주 사건 이후 심야 귀가 안전 대책 요구 확산</li><li>‘마지막 도보 구간’이 안전 사각지대로 확인</li><li>재발 방지는 이제 교육행정의 책무</li></ul></div>
+    <div class="card"><span class="num-dot">2</span><h3>제주는 예외가 아닙니다</h3>
+      <ul class="dot"><li>야자 종료 22시 이후 버스 사실상 단절</li><li>가로등 없는 도보 20분+ — 동일한 구조적 위험</li><li>사고는 예고 없이, 책임 규명은 사후에 옵니다</li></ul></div>
+    <div class="card"><span class="num-dot">3</span><h3>사후 대응보다 사전 예방</h3>
+      <ul class="dot"><li>사고 후: 감사·책임 규명·수습이라는 값비싼 비용</li><li>예방: 월 500만 원 유상 POC로 즉시 시작 가능</li><li>가장 저렴한 대책은 지금 시작하는 예방입니다</li></ul></div>
+  </div>
+  <div class="banner">이 제안의 성공은 <b>다음 비극을 막기 위한 최소한의 안전장치</b>입니다</div>
+  <span class="pageno">06 / 31</span>
+</section>
+
+<!-- 07 밤 10시 이후 실태 -->
+<section class="slide light" id="s7" data-n="07">
+  <div class="slide-head">
+    <div><div class="eyebrow">10 PM, After 야자</div><h2>밤 10시 이후 — 야간자율학습 학생의 귀가 실태</h2></div>
+    <span class="chip">Ⅱ. 배경 및 필요성</span>
+  </div>
+  <div class="grid g3 body-wrap" style="align-content:center">
+    <div class="card"><span class="num-dot">1</span><h3>야간 시내버스 배차 단절</h3>
+      <ul class="dot"><li>야자 종료(22:00~23:00) 직후 귀가 버스 단절</li><li>배차 간격 60분 → 사실상 미운행</li><li>학생 스스로 귀가할 교통수단 부재</li></ul></div>
+    <div class="card"><span class="num-dot">2</span><h3>어두운 귀갓길 위험</h3>
+      <ul class="dot"><li>가로등 없는 어두운 귀갓길</li><li>차량 사각지대 보행 노출</li><li>야간 교통사고 위험 상존 · 평균 도보 20분+</li></ul></div>
+    <div class="card"><span class="num-dot">3</span><h3>학부모 불안 · 픽업 부담</h3>
+      <ul class="dot"><li>밤 10시 이후 자녀 위치 확인 불가</li><li>생업에 지장을 주는 픽업의 일상화</li><li>교육청 민원이 집중되는 시간대</li></ul></div>
+  </div>
+  <div class="banner">야간 귀가 문제는 <b>교통 문제가 아닌 교육복지·안전 정책의 문제</b>입니다</div>
+  <span class="pageno">07 / 31</span>
+</section>
+
+<!-- 08 제주 지역 특성 -->
+<section class="slide light" id="s8" data-n="08">
+  <div class="slide-head">
+    <div><div class="eyebrow">Jeju Regional Context</div><h2>제주 지역 특성 — 야간자율학습 후 귀가 교통 현황</h2></div>
+    <span class="chip">Ⅱ. 배경 및 필요성</span>
+  </div>
+  <div class="split body-wrap">
+    <div class="card table-scroll" style="padding:10px 16px">
+      <table>
+        <thead><tr><th>구분</th><th>현재 상황</th><th style="color:var(--lime-deep);opacity:1">DtoD 야자버스</th></tr></thead>
+        <tbody>
+          <tr><td><b>야간 귀가</b></td><td>배차 불규칙 · 단절</td><td><b>전용 버스 정기 운행</b></td></tr>
+          <tr><td><b>귀가 수단</b></td><td>학부모 픽업 의존</td><td><b>Door-to-Door 서비스</b></td></tr>
+          <tr><td><b>귀가 안전</b></td><td>어두운 길 보행 위험</td><td><b>집 앞 하차 — 도보 최소화</b></td></tr>
+          <tr><td><b>학부모 안심</b></td><td>위치 확인 불가</td><td><b>GPS·알림 실시간 확인</b></td></tr>
+          <tr><td><b>행정 부담</b></td><td>민원 반복 접수</td><td><b>민원 원천 감소</b></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="card"><span class="pill">01</span><h3>야간 귀가 버스 공백</h3><p>야자 종료 시간대 배차 간격 60분 이상, 또는 미운행</p></div>
+      <div class="card"><span class="pill">02</span><h3>광역 분산 거주</h3><p>학생 거주지가 읍·면 단위로 넓게 분산, 도보·자전거 귀가 곤란</p></div>
+      <div class="card"><span class="pill">03</span><h3>정책 확장 근거 존재</h3><p>통학 거리 학생 지원 조례 보유 → 안심 귀가버스로 자연스러운 확장</p></div>
+    </div>
+  </div>
+  <div class="banner tint" style="margin-top:20px">DtoD 야자버스는 <b>기존 교육청 통학 지원 조례의 자연스러운 정책 확장</b>입니다</div>
+  <span class="pageno">08 / 31</span>
+</section>
+
+<!-- 09 SECTION III DIVIDER -->
+<section class="slide lime" id="s9" data-n="09">
+  <div class="brand" style="color:#14210F">Ciel Mobility</div>
+  <div class="body-wrap">
+    <div>
+      <div class="eyebrow">Ⅲ · 제안 내용</div>
+      <h1 style="font-size:clamp(38px,5.8vw,64px)">DtoD 야자버스</h1>
+      <p class="sub" style="margin-top:8px;opacity:.8;font-weight:700">Door-to-Door 스마트 안전 플랫폼 — 학교 문 앞에서 집 문 앞까지</p>
+    </div>
+    <div class="cover-flow lime-flow" style="margin-top:10px">
+      <div class="n" style="border-color:rgba(20,33,15,.25)"><div class="t">학교 출발</div></div>
+      <div class="n" style="border-color:rgba(20,33,15,.25)"><div class="t">탑승 확인</div></div>
+      <div class="n" style="border-color:rgba(20,33,15,.25)"><div class="t">GPS 추적</div></div>
+      <div class="n" style="border-color:rgba(20,33,15,.25)"><div class="t">집 앞 하차</div></div>
+    </div>
+  </div>
+  <span class="pageno">09 / 31</span>
+</section>
+
+<!-- 10 서비스 개념 -->
+<section class="slide light" id="s10" data-n="10">
+  <div class="slide-head">
+    <div><div class="eyebrow">Service Concept</div><h2>Door-to-Door 안심 귀가 서비스 개념</h2></div>
+    <span class="chip">Ⅲ. 제안 내용</span>
+  </div>
+  <div class="body-wrap">
+    <div class="flow">
+      <div class="step"><div class="k">Step 1</div><div class="t">학교 출발</div><div class="d">야자 종료 22:00~ · 교문 앞 정차·탑승</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="k">Step 2</div><div class="t">탑승 확인</div><div class="d">학생증·QR 태그로 자동 기록 · 학부모에게 즉시 알림</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="k">Step 3</div><div class="t">집 앞 하차</div><div class="d">GPS 실시간 추적 · 거주지 인근 하차 지점 도착</div></div>
+    </div>
+    <div class="card" style="display:flex;gap:20px;align-items:center;flex-wrap:wrap">
+      <div style="min-width:130px"><span class="pill">Door-to-Door<br>서비스란?</span></div>
+      <p style="flex:1;font-size:14px;min-width:240px">단순 정류장 운행이 아닌, <b>학생 거주지 인근까지 최대한 근접 운행</b>하는 맞춤형 귀가 서비스입니다.<br>GPS 기반 최적 노선으로 각 학생의 집 근처 하차 지점까지 안전하게 이동 — 어두운 도보 시간을 최소화합니다.</p>
+    </div>
+  </div>
+  <div class="banner">야자버스 = 학교 문 앞 → 집 문 앞 &nbsp;·&nbsp; <b>어두운 귀갓길 도보 ZERO</b></div>
+  <span class="pageno">10 / 31</span>
+</section>
+
+<!-- 11 4대 핵심 기능 -->
+<section class="slide light" id="s11" data-n="11">
+  <div class="slide-head">
+    <div><div class="eyebrow">Proven Platform</div><h2>4대 핵심 기능 — 이미 검증된 실제 운영 서비스</h2></div>
+    <span class="chip">Ⅲ. 제안 내용</span>
+  </div>
+  <div class="grid g4 body-wrap" style="align-content:center">
+    <div class="card"><span class="pill">QR</span><h3>QR 탑승 체크</h3><p>학생증·앱 QR 태그로 탑승과 하차가 자동 기록됩니다</p></div>
+    <div class="card"><span class="pill">GPS</span><h3>실시간 GPS 위치</h3><p>버스 위치와 도착 예정시간을 학부모 앱에서 실시간 확인</p></div>
+    <div class="card"><span class="pill">PUSH</span><h3>학부모 Push 알림</h3><p>탑승·하차 즉시 알림 발송, 도착 예정 안내까지 자동화</p></div>
+    <div class="card"><span class="pill">24H</span><h3>24시간 고객센터</h3><p>민원·문의 상시 대응으로 교육청 행정 부담 최소화</p></div>
+  </div>
+  <div class="banner">탑승 시 QR 스캔 → 학부모에게 즉시 Push 알림 — <b>카카오·삼성전자·인천교육청에서 실제 운영 중인 플랫폼 그대로</b></div>
+  <span class="pageno">11 / 31</span>
+</section>
+
+<!-- 12 앱 동작 흐름 -->
+<section class="slide light" id="s12" data-n="12">
+  <div class="slide-head">
+    <div><div class="eyebrow">How It Works</div><h2>실제 앱 동작 흐름 — QR 탑승부터 학부모 알림까지</h2></div>
+    <span class="chip">Ⅲ. 제안 내용</span>
+  </div>
+  <div class="split body-wrap">
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="card"><span class="num-dot">1</span><h3>QR로 탑승 확인</h3><p>학생이 앱 QR 코드를 버스 단말기에 태그하는 순간 탑승이 자동 기록됩니다</p></div>
+      <div class="card"><span class="num-dot">2</span><h3>학부모 즉시 알림</h3><p>탑승 완료 즉시 Push 알림 발송 — 하차 시에도 재알림</p></div>
+      <div class="card"><span class="num-dot">3</span><h3>실시간 도착 안내</h3><p>버스 위치와 도착 예정시간을 앱 지도에서 실시간 확인</p></div>
+    </div>
+    <div class="kdark" style="display:flex;flex-direction:column;justify-content:center;gap:16px;padding:30px">
+      <div class="k">Parents First</div>
+      <div class="quote">“아이가 탑승하는 순간,<br>학부모가 먼저 압니다”</div>
+      <p style="font-size:13px;opacity:.7">카카오 · 삼성전자 · 인천교육청에서 검증된 실제 운영 플랫폼 —<br>별도 개발 기간 없이 야자버스에 즉시 적용 가능합니다</p>
+    </div>
+  </div>
+  <span class="pageno">12 / 31</span>
+</section>
+
+<!-- 13 POC 시범 지역 -->
+<section class="slide light" id="s13" data-n="13">
+  <div class="slide-head">
+    <div><div class="eyebrow">POC Pilot Area</div><h2>POC 시범 지역 — 제주시내 권역 선정 근거</h2></div>
+    <span class="chip">Ⅲ. 제안 내용</span>
+  </div>
+  <div class="split body-wrap">
+    <div class="card" style="display:flex;flex-direction:column;gap:14px">
+      <h3 style="font-size:17px">선정 근거</h3>
+      <ul class="check">
+        <li>고교 밀집 — 야간자율학습 학생 수 제주 최다</li>
+        <li>심야 시간대 배차 단절 — 막차 조기 종료 노선 다수</li>
+        <li>시 외곽 거주 학생의 어두운 도보 구간 상존</li>
+        <li>표본 최다 — 3개월 내 만족도 입증에 최적</li>
+      </ul>
+      <div style="margin-top:auto;border-top:1px solid var(--card-line);padding-top:12px;font-size:14px">
+        <b style="color:var(--lime-deep)">시범 규모</b> &nbsp; 차량 1대 × 3개월 · 제주시내 권역 <b>(유상 POC)</b>
+      </div>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;gap:13px">
+      <h3 style="font-size:17px">시범 지역 평가 — 제주시내</h3>
+      <div class="ratebar"><span class="n">야간 귀가 위험</span><div class="track"><div class="fill" style="width:100%"></div></div><span class="s">5/5</span></div>
+      <div class="ratebar"><span class="n">대상 학생 규모</span><div class="track"><div class="fill" style="width:100%"></div></div><span class="s">5/5</span></div>
+      <div class="ratebar"><span class="n">학부모 체감도</span><div class="track"><div class="fill" style="width:100%"></div></div><span class="s">5/5</span></div>
+      <div class="ratebar"><span class="n">교육격차 개선</span><div class="track"><div class="fill" style="width:80%"></div></div><span class="s">4/5</span></div>
+      <div class="ratebar"><span class="n">언론 홍보성</span><div class="track"><div class="fill" style="width:80%"></div></div><span class="s">4/5</span></div>
+      <div class="ratebar"><span class="n">확장성</span><div class="track"><div class="fill" style="width:100%"></div></div><span class="s">5/5</span></div>
+    </div>
+  </div>
+  <div class="banner" style="margin-top:20px"><b>제주시내 야자버스 = 학부모가 가장 체감하는 교육복지</b> — 제주교육이 귀가 안전까지 책임지는 새로운 기준</div>
+  <span class="pageno">13 / 31</span>
+</section>
+
+<!-- 14 SECTION IV DIVIDER -->
+<section class="slide dark" id="s14" data-n="14">
+  <div class="brand">Ciel Mobility</div>
+  <div class="split body-wrap">
+    <div style="display:flex;flex-direction:column;justify-content:center;gap:16px">
+      <div>
+        <div class="eyebrow">Ⅳ · 비용 구조</div>
+        <h1>All-in-One 단일 계약</h1>
+      </div>
+      <div class="big-price">6,000<small>만 원</small></div>
+      <p class="sub">차량 1대 연간 — 차량·기사·연료·보험·GPS·앱·고객센터 전부 포함</p>
+      <ul class="check" style="font-size:14px">
+        <li>행정 창구 1개</li><li>복잡한 계약 없음</li><li>분기별 정산 가능</li>
+      </ul>
+    </div>
+    <div class="kdark" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);display:flex;flex-direction:column;justify-content:center;gap:12px;padding:30px">
+      <div class="k">POC 예산</div>
+      <h3 style="font-size:19px;font-weight:900">제주시내 유상 시범운영</h3>
+      <p style="font-size:14px;opacity:.75">차량 1대 × 3개월</p>
+      <div class="big-price" style="font-size:clamp(34px,4.4vw,52px)">총 1,500<small>만 원</small></div>
+      <div style="border-top:1px solid rgba(255,255,255,.12);padding-top:12px">
+        <div style="font-weight:800;font-size:13.5px">예산 편성 요청 항목</div>
+        <p style="font-size:12.5px;opacity:.65">2026년 하반기 시범사업비</p>
+      </div>
+    </div>
+  </div>
+  <span class="pageno">14 / 31</span>
+</section>
+
+<!-- 15 All-in-One 포함 항목 -->
+<section class="slide light" id="s15" data-n="15">
+  <div class="slide-head">
+    <div><div class="eyebrow">All-in-One</div><h2>All-in-One 포함 항목 및 POC 예산</h2></div>
+    <span class="chip">Ⅳ. 비용 구조</span>
+  </div>
+  <div class="split body-wrap" style="grid-template-columns:1fr 2fr">
+    <div class="kdark" style="display:flex;flex-direction:column;gap:12px;padding:26px">
+      <div class="k">차량 1대 · 연간</div>
+      <div class="big-price" style="font-size:clamp(34px,4vw,48px)">6,000<small>만 원</small></div>
+      <div style="font-weight:800">All-in-One 단일 계약</div>
+      <ul class="check" style="font-size:13.5px;--c:var(--lime)">
+        <li>행정 창구 1개</li><li>복잡한 계약 없음</li><li>분기별 정산 가능</li>
+      </ul>
+    </div>
+    <div class="grid g3">
+      <div class="card"><h3>✓ 전용 차량</h3><p>학교버스 규격</p></div>
+      <div class="card"><h3>✓ 전문 운전기사</h3><p>4대 보험 가입</p></div>
+      <div class="card"><h3>✓ 연료비 전액</h3><p>노선 거리 무관</p></div>
+      <div class="card"><h3>✓ 종합 보험</h3><p>대인·대물·자차</p></div>
+      <div class="card"><h3>✓ GPS·학부모 앱</h3><p>실시간 위치·알림</p></div>
+      <div class="card"><h3>✓ 24시간 고객센터</h3><p>민원 상시 대응</p></div>
+    </div>
+  </div>
+  <div class="banner tint" style="margin-top:20px">제주시내 유상 POC (차량 1대 × 3개월) &nbsp; <b>총 1,500만 원</b></div>
+  <span class="pageno">15 / 31</span>
+</section>
+
+<!-- 16 비용 산정 내역 -->
+<section class="slide light" id="s16" data-n="16">
+  <div class="slide-head">
+    <div><div class="eyebrow">Cost Breakdown</div><h2>연간 비용 산정 내역 — 차량 1대 기준</h2></div>
+    <span class="chip">Ⅳ. 비용 구조</span>
+  </div>
+  <div class="split body-wrap">
+    <div class="card table-scroll" style="padding:10px 16px">
+      <table>
+        <thead><tr><th>항목</th><th class="r">월 단가</th><th class="r">연간 환산</th><th>비고</th></tr></thead>
+        <tbody>
+          <tr><td>전용 차량 (감가상각)</td><td class="r">150만 원</td><td class="r">1,800만 원</td><td>학교버스 규격</td></tr>
+          <tr><td>전문 운전기사 인건비</td><td class="r">280만 원</td><td class="r">3,360만 원</td><td>4대 보험 포함</td></tr>
+          <tr><td>연료비</td><td class="r">60만 원</td><td class="r">720만 원</td><td>노선 거리 기준 추산</td></tr>
+          <tr><td>종합 보험료</td><td class="r">35만 원</td><td class="r">420만 원</td><td>대인·대물·자차</td></tr>
+          <tr><td>GPS·앱 시스템 유지</td><td class="r">30만 원</td><td class="r">360만 원</td><td>서버·앱·업데이트</td></tr>
+          <tr><td>24시간 고객센터</td><td class="r">28만 원</td><td class="r">340만 원</td><td>상시 콜센터 운영</td></tr>
+          <tr><td><b>산정 원가 합계</b></td><td class="r"><b>583만 원</b></td><td class="r"><b>7,000만 원</b></td><td><b style="color:var(--lime-deep)">→ 계약가 6,000만 원</b></td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:11.5px;opacity:.55;padding:10px 4px 6px">※ 상기 금액은 추산치 — 유상 POC는 월 500만 원 × 3개월 = 총 1,500만 원으로 산정합니다</p>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;gap:12px">
+      <h3 style="font-size:16px">연간 비용 구성비</h3>
+      <div class="ratebar"><span class="n">인건비</span><div class="track"><div class="fill" style="width:96%"></div></div><span class="s">48%</span></div>
+      <div class="ratebar"><span class="n">차량</span><div class="track"><div class="fill" style="width:52%"></div></div><span class="s">26%</span></div>
+      <div class="ratebar"><span class="n">연료</span><div class="track"><div class="fill" style="width:20%"></div></div><span class="s">10%</span></div>
+      <div class="ratebar"><span class="n">보험</span><div class="track"><div class="fill" style="width:12%"></div></div><span class="s">6%</span></div>
+      <div class="ratebar"><span class="n">GPS·앱</span><div class="track"><div class="fill" style="width:10%"></div></div><span class="s">5%</span></div>
+      <div class="ratebar"><span class="n">고객센터</span><div class="track"><div class="fill" style="width:10%"></div></div><span class="s">5%</span></div>
+      <div class="kdark" style="margin-top:auto;text-align:center;padding:16px">
+        <div style="font-weight:800;font-size:14.5px">원가 7,000만 원 → <span style="color:var(--lime)">계약가 6,000만 원</span></div>
+        <p style="font-size:12px;opacity:.65;margin-top:4px">연간 약 1,000만 원(14%) 절감된 통합 단가로 제공</p>
+      </div>
+    </div>
+  </div>
+  <span class="pageno">16 / 31</span>
+</section>
+
+<!-- 17 SECTION V DIVIDER -->
+<section class="slide dark" id="s17" data-n="17">
+  <div class="brand">Ciel Mobility</div>
+  <div class="body-wrap">
+    <div>
+      <div class="eyebrow">Ⅴ · 도입 효과</div>
+      <h1>3개월 안에 증명하겠습니다</h1>
+      <p class="sub" style="margin-top:8px">POC 목표 KPI — 학부모·학생·교육청 3축 기대효과</p>
+    </div>
+    <div class="grid g4">
+      <div class="stat"><div class="v">85%+</div><div class="l">학부모 만족도</div></div>
+      <div class="stat"><div class="v">60%+</div><div class="l">학생 탑승률</div></div>
+      <div class="stat"><div class="v">50%+</div><div class="l">민원 감소</div></div>
+      <div class="stat"><div class="v">0건</div><div class="l">안전사고</div></div>
+    </div>
+  </div>
+  <span class="pageno">17 / 31</span>
+</section>
+
+<!-- 18 POC KPI -->
+<section class="slide light" id="s18" data-n="18">
+  <div class="slide-head">
+    <div><div class="eyebrow">POC KPI</div><h2>POC 목표 KPI — 3개월 내 가시적 성과 창출</h2></div>
+    <span class="chip">Ⅴ. 도입 효과</span>
+  </div>
+  <div class="body-wrap">
+    <div class="grid g4">
+      <div class="stat"><div class="v">85%+</div><div class="l">학부모 만족도</div><div class="d">시범 종료 시 학부모 설문조사</div></div>
+      <div class="stat"><div class="v">60%+</div><div class="l">학생 탑승률</div><div class="d">대상 학생 대비 일평균 탑승</div></div>
+      <div class="stat"><div class="v">50%+</div><div class="l">민원 감소율</div><div class="d">귀가 관련 민원 전년 동기 대비</div></div>
+      <div class="stat"><div class="v">0건</div><div class="l">안전사고</div><div class="d">시범 기간 전 구간 무사고 운행</div></div>
+    </div>
+    <div>
+      <p style="font-weight:900;font-size:16px;margin-bottom:12px">교육감 비공식 KPI <span style="font-weight:600;font-size:13px;opacity:.6">— 행정 성과의 진짜 척도</span></p>
+      <div class="grid g4">
+        <div class="kdark"><div class="k">민원 감소</div><h4>학부모 민원 감소</h4><p>교육청 행정 부담 완화</p></div>
+        <div class="kdark"><div class="k">교육격차</div><h4>교육격차 완화</h4><p>교육 정책 핵심 성과 지표</p></div>
+        <div class="kdark"><div class="k">정책 브랜드</div><h4>언론 보도 가능성</h4><p>교육감 정책 브랜드 강화</p></div>
+        <div class="kdark"><div class="k">선진 모델</div><h4>전국 벤치마킹</h4><p>제주교육 선진 모델 위상</p></div>
+      </div>
+    </div>
+  </div>
+  <span class="pageno">18 / 31</span>
+</section>
+
+<!-- 19 담당자 KPI 연계 -->
+<section class="slide light" id="s19" data-n="19">
+  <div class="slide-head">
+    <div><div class="eyebrow">KPI for Officials</div><h2>담당자 KPI 연계 — POC 성과가 곧 행정 성과입니다</h2></div>
+    <span class="chip">Ⅴ. 도입 효과</span>
+  </div>
+  <div class="body-wrap">
+    <div class="grid g4">
+      <div class="stat"><div class="v">85%+</div><div class="l">학부모 만족도</div><div class="d">정책고객 만족도 평가 실적 직결</div></div>
+      <div class="stat"><div class="v">60%+</div><div class="l">학생 탑승률</div><div class="d">정책 수요 입증 — 예산 편성 근거</div></div>
+      <div class="stat"><div class="v">50%+</div><div class="l">민원 감소율</div><div class="d">민원 처리 실적·부서 평가 개선</div></div>
+      <div class="stat"><div class="v">0건</div><div class="l">안전사고</div><div class="d">안전관리 책임·감사 리스크 해소</div></div>
+    </div>
+    <div>
+      <p style="font-weight:900;font-size:16px;margin-bottom:12px">담당자 성과 연계 포인트 <span style="font-weight:600;font-size:13px;opacity:.6">— 3개월 성과보고서가 곧 본사업 결재 근거</span></p>
+      <div class="grid g4">
+        <div class="kdark"><div class="k">적극행정</div><h4>적극행정 우수공무원</h4><p>선제적 안전정책 추진 실적</p></div>
+        <div class="kdark"><div class="k">성과 평가</div><h4>부서 성과지표 달성</h4><p>만족도·민원 지표 즉시 개선</p></div>
+        <div class="kdark"><div class="k">정책 브랜드</div><h4>언론·우수사례 보도</h4><p>교육감 공약 성과 뒷받침</p></div>
+        <div class="kdark"><div class="k">본사업 전환</div><h4>차기년도 본예산 편성</h4><p>3개월 데이터로 근거 확보</p></div>
+      </div>
+    </div>
+  </div>
+  <span class="pageno">19 / 31</span>
+</section>
+
+<!-- 20 3축 기대효과 -->
+<section class="slide light" id="s20" data-n="20">
+  <div class="slide-head">
+    <div><div class="eyebrow">Three Stakeholders</div><h2>3축 기대효과 — 학부모 · 학생 · 교육청</h2></div>
+    <span class="chip">Ⅴ. 도입 효과</span>
+  </div>
+  <div class="grid g3 body-wrap" style="align-content:center">
+    <div class="card"><span class="pill">불안 해소</span><h3>학부모</h3>
+      <ul class="check"><li>자녀 실시간 위치 확인 — 불안 해소</li><li>Door-to-Door로 픽업 부담 해결</li><li>교육청 신뢰도·만족도 동반 상승</li></ul></div>
+    <div class="card"><span class="pill">안전 귀가</span><h3>학생</h3>
+      <ul class="check"><li>어두운 귀갓길 도보 없이 집 앞까지</li><li>모든 학생에게 동등한 귀가 안전 보장</li><li>야간자율학습 참여율 증가 기대</li></ul></div>
+    <div class="kdark"><span class="pill">정책 성과</span><h3 style="font-size:16px;font-weight:800;margin:6px 0 10px">교육청</h3>
+      <ul class="check"><li>학부모 민원 50% 이상 감소</li><li>교육복지 정책 성과 가시화·홍보</li><li>전국 벤치마킹 선진 사례 구축</li></ul></div>
+  </div>
+  <div class="banner">세 이해관계자 모두에게 즉시 체감되는 효과 — <b>시범 3개월 안에 수치로 확인됩니다</b></div>
+  <span class="pageno">20 / 31</span>
+</section>
+
+<!-- 21 SECTION VI DIVIDER -->
+<section class="slide dark" id="s21" data-n="21">
+  <div class="brand">Ciel Mobility</div>
+  <div class="body-wrap">
+    <div>
+      <div class="eyebrow">Ⅵ · 단계별 로드맵</div>
+      <h1>단계별 도입 로드맵</h1>
+      <p class="sub" style="margin-top:8px">제주시내 POC → 제주 전역 → 전국 선진 모델</p>
+    </div>
+    <div class="flow">
+      <div class="step"><div class="k">Phase 1</div><div class="t">POC 시범운영</div><div class="d">0 ~ 3개월</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="k">Phase 2</div><div class="t">제주 전역 확대</div><div class="d">4 ~ 12개월</div></div>
+      <div class="arrow">→</div>
+      <div class="step" style="background:var(--lime);color:#14210F;border:none"><div class="k" style="color:#2C5313">Phase 3</div><div class="t">전국 선진 모델</div><div class="d" style="opacity:.75">13개월 ~</div></div>
+    </div>
+  </div>
+  <span class="pageno">21 / 31</span>
+</section>
+
+<!-- 22 로드맵 상세 -->
+<section class="slide light" id="s22" data-n="22">
+  <div class="slide-head">
+    <div><div class="eyebrow">Roadmap</div><h2>3단계 도입 로드맵 — POC에서 전국 모델까지</h2></div>
+    <span class="chip">Ⅵ. 단계별 로드맵</span>
+  </div>
+  <div class="grid g3 body-wrap" style="align-content:center">
+    <div class="card"><span class="pill">Phase 1 · 0~3개월</span><h3>POC 시범운영</h3>
+      <ul class="check"><li>제주시내 차량 1대 운영 시작</li><li>성과 데이터 수집·분석</li><li>학부모 만족도 조사</li><li>KPI 달성 확인 보고</li></ul></div>
+    <div class="card"><span class="pill">Phase 2 · 4~12개월</span><h3>제주 전역 확대</h3>
+      <ul class="check"><li>제주 전 지역 단계적 확대</li><li>노선 최적화 알고리즘 고도화</li><li>학부모 앱 기능 개선</li><li>차기년도 예산 확보 협의</li></ul></div>
+    <div class="kdark"><span class="pill">Phase 3 · 13개월~</span><h3 style="font-size:16px;font-weight:800;margin:6px 0 10px">제도화 · 전국 모델</h3>
+      <ul class="check"><li>제주 전체 정규 사업화</li><li>타 시도교육청 벤치마킹 유치</li><li>교육부 우수사례 선정 추진</li><li>전국 확산 표준 모델 확립</li></ul></div>
+  </div>
+  <div class="banner tint">POC 성과가 곧 확대의 근거 — <b>3개월 데이터로 차기년도 본사업 예산 편성을 뒷받침합니다</b></div>
+  <span class="pageno">22 / 31</span>
+</section>
+
+<!-- 23 SECTION VII DIVIDER -->
+<section class="slide dark" id="s23" data-n="23">
+  <div class="brand">Ciel Mobility</div>
+  <div class="body-wrap">
+    <div>
+      <div class="eyebrow">Ⅶ · 제안기관 소개</div>
+      <h1>주식회사 Ciel Mobility</h1>
+      <p class="sub" style="margin-top:8px">14년의 스마트 모빌리티 운영 역량과 검증된 교육청 레퍼런스</p>
+    </div>
+    <div class="grid g4">
+      <div class="stat"><div class="v">326억</div><div class="l">2024 연 매출</div></div>
+      <div class="stat"><div class="v">2,900회</div><div class="l">일평균 운행</div></div>
+      <div class="stat"><div class="v">2,322만 명</div><div class="l">누적 수송 인원</div></div>
+      <div class="stat"><div class="v">14년+</div><div class="l">운영 경력</div></div>
+    </div>
+  </div>
+  <span class="pageno">23 / 31</span>
+</section>
+
+<!-- 24 ABOUT US -->
+<section class="slide light" id="s24" data-n="24">
+  <div class="slide-head">
+    <div><div class="eyebrow">About Us</div><h2>주식회사 Ciel Mobility</h2>
+      <p class="sub">14년 넘게 쌓아온 기술력으로, 점차 복잡해지는 세상의 모든 이동에 최적의 효율을 더합니다.</p></div>
+    <span class="chip">Ⅶ. 제안기관 소개</span>
+  </div>
+  <div class="body-wrap">
+    <div class="grid g5" style="gap:12px">
+      <div class="stat" style="padding:16px"><div class="v" style="font-size:24px">326억 원</div><div class="d">연 매출</div></div>
+      <div class="stat" style="padding:16px"><div class="v" style="font-size:24px">2,900회</div><div class="d">일평균 운행</div></div>
+      <div class="stat" style="padding:16px"><div class="v" style="font-size:24px">2,322만 명</div><div class="d">누적 수송</div></div>
+      <div class="stat" style="padding:16px"><div class="v" style="font-size:24px">2012년</div><div class="d">설립</div></div>
+      <div class="stat" style="padding:16px"><div class="v" style="font-size:24px">SW 1등급</div><div class="d">GS인증</div></div>
+    </div>
+    <div class="card">
+      <h3 style="margin-bottom:14px">주요 성과</h3>
+      <div class="timeline">
+        <div class="row"><span class="y">2012</span><span class="t">국내 최초 Connected Car IoT 기반 셔틀버스 운행 최적화 서비스 상용화</span></div>
+        <div class="row"><span class="y">2019</span><span class="t">국내 최초 수요응답형 모빌리티(DRT) 서비스 출시 — 인천광역시 I-MOD</span></div>
+        <div class="row"><span class="y">2023</span><span class="t">카카오 그룹(25개사) 통합 통근 플랫폼 단독 수주 · GS인증 1등급 취득</span></div>
+        <div class="row" style="border:none;padding-bottom:0"><span class="y">2025</span><span class="t">서울 동작구 DRT 런칭 · 국토교통부 여객자동차 플랫폼운송사업 허가 취득</span></div>
+      </div>
+    </div>
+    <p style="font-size:12px;opacity:.55">본사 대구광역시 동구 동대구로 475, 14층 (대구테크노파크) · 강남센터 서울특별시 강남구 강남대로 318, 8층</p>
+  </div>
+  <span class="pageno">24 / 31</span>
+</section>
+
+<!-- 25 연혁 -->
+<section class="slide light" id="s25" data-n="25">
+  <div class="slide-head">
+    <div><div class="eyebrow">History</div><h2>회사 연혁</h2></div>
+    <span class="chip">Ⅶ. 제안기관 소개</span>
+  </div>
+  <div class="body-wrap" style="gap:12px">
+    <div class="card"><span class="pill">2025</span><p style="font-size:13.5px;opacity:.9">카카오 그룹(25개사) 통합 통근 플랫폼 단독 수주·운영 · 서울 동작구 DRT 서비스 런칭(서울시 최초)<br>국토교통부 플랫폼운송사업 Type1 허가 취득 · 혁신기업 국가대표 1000 선정</p></div>
+    <div class="card"><span class="pill">2024</span><p style="font-size:13.5px;opacity:.9">삼성전자·삼성E&amp;A 평택캠퍼스 수요응답 셔틀 공급 · 코스닥 기술특례상장 예비평가 A등급<br>연 매출 326억 원 달성 · ISO 9001·14001 통합 인증</p></div>
+    <div class="card"><span class="pill">2023</span><p style="font-size:13.5px;opacity:.9">쿠팡풀필먼트서비스 통근버스 플랫폼운송 수주 · GS 소프트웨어 1등급 인증 (MOBBLE v1.0)<br>조달청 우수조달물품 지정 · 국토교통부 장관 표창</p></div>
+    <div class="card"><span class="pill">2019~22</span><p style="font-size:13.5px;opacity:.9">국내 최초 DRT I-MOD 출시(2019) · IR52 장영실상 수상(2021) · 혁신기업 국가대표 1000 선정(2022)</p></div>
+    <div class="card"><span class="pill">2012~18</span><p style="font-size:13.5px;opacity:.9">Ciel Mobility 설립(2012) · LG U+ 헬로버스 IoT 서비스 출시(2013) · 현대자동차그룹 통근버스 통합 관리 수주(2017)</p></div>
+  </div>
+  <span class="pageno">25 / 31</span>
+</section>
+
+<!-- 26 인증·수상 -->
+<section class="slide light" id="s26" data-n="26">
+  <div class="slide-head">
+    <div><div class="eyebrow">Certifications &amp; Awards</div><h2>인증 및 수상 현황</h2></div>
+    <span class="chip">Ⅶ. 제안기관 소개</span>
+  </div>
+  <div class="split body-wrap">
+    <div class="card table-scroll" style="padding:10px 16px">
+      <table>
+        <thead><tr><th>주요 수상</th><th>기관</th><th class="r">연도</th></tr></thead>
+        <tbody>
+          <tr><td>혁신기업 국가대표 1000 선정</td><td>국토교통부</td><td class="r">2025</td></tr>
+          <tr><td>SMART CITY KOREA 우수기업</td><td>국토교통부</td><td class="r">2024</td></tr>
+          <tr><td>올해의 실무팀 수상</td><td>한국ITS협회</td><td class="r">2024</td></tr>
+          <tr><td>국토교통부 장관 표창</td><td>국토교통부</td><td class="r">2023</td></tr>
+          <tr><td>대구광역시 중소기업대상 최우수</td><td>대구광역시</td><td class="r">2022</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card table-scroll" style="padding:10px 16px">
+      <table>
+        <thead><tr><th>주요 인증</th><th>기관</th><th class="r">연도</th></tr></thead>
+        <tbody>
+          <tr><td>GS 소프트웨어 1등급 인증</td><td>TTA</td><td class="r">2023</td></tr>
+          <tr><td>조달청 우수조달물품 지정</td><td>조달청</td><td class="r">2023</td></tr>
+          <tr><td>ISO 9001 / 14001</td><td>한국품질진흥원</td><td class="r">2024</td></tr>
+          <tr><td>KC인증 RTK-C1000</td><td>국립전파연구원</td><td class="r">2024</td></tr>
+          <tr><td>벤처·이노비즈·메인비즈</td><td>중소벤처기업부</td><td class="r">2024~</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="banner tint" style="margin-top:20px"><b>교육청 도입 레퍼런스</b> — 인천교육청 학생성공버스(2023~ · 51대 · 교육부 정부혁신 우수사례) · 밀양교육지원청(2014~ · 12년 · 35대) · 증평·괴산교육지원청</div>
+  <span class="pageno">26 / 31</span>
+</section>
+
+<!-- 27 IP 포트폴리오 -->
+<section class="slide light" id="s27" data-n="27">
+  <div class="slide-head">
+    <div><div class="eyebrow">IP Portfolio</div><h2>지식재산권 포트폴리오 및 사업 면허</h2></div>
+    <span class="chip">Ⅶ. 제안기관 소개</span>
+  </div>
+  <div class="split body-wrap">
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="grid g2" style="gap:12px">
+        <div class="stat" style="padding:16px"><div class="v" style="font-size:28px">57건</div><div class="l">특허권</div><div class="d">등록 32 · 출원 25</div></div>
+        <div class="stat" style="padding:16px"><div class="v" style="font-size:28px">17건</div><div class="l">상표권</div><div class="d">등록 13 · 출원 4</div></div>
+        <div class="stat" style="padding:16px"><div class="v" style="font-size:28px">1건</div><div class="l">디자인권</div><div class="d">등록 1</div></div>
+        <div class="stat" style="padding:16px"><div class="v" style="font-size:28px">20건</div><div class="l">저작권</div><div class="d">등록 20</div></div>
+      </div>
+      <div class="kdark">
+        <div class="k">여객자동차 운송사업 면허 — 합법 운행의 제도적 기반</div>
+        <h4>수요응답형 교통수단 한정면허 <span style="opacity:.6;font-weight:600">(국내 최초 · 2020.10~)</span></h4>
+        <h4>플랫폼운송사업 Type 1 면허 <span style="opacity:.6;font-weight:600">(국토교통부 · 2025.07~2035.07)</span></h4>
+      </div>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;gap:13px">
+      <h3 style="font-size:16px">핵심기술별 특허 보유 현황</h3>
+      <div class="ratebar"><span class="n">동적 라우팅</span><div class="track"><div class="fill" style="width:100%"></div></div><span class="s">32건</span></div>
+      <div class="ratebar"><span class="n">오퍼레이션</span><div class="track"><div class="fill" style="width:35%"></div></div><span class="s">11건</span></div>
+      <div class="ratebar"><span class="n">정적 라우팅</span><div class="track"><div class="fill" style="width:31%"></div></div><span class="s">10건</span></div>
+      <div class="ratebar"><span class="n">수요·트래픽 예측</span><div class="track"><div class="fill" style="width:13%"></div></div><span class="s">4건</span></div>
+      <p style="font-size:12px;opacity:.6;margin-top:auto">노선 최적화 원천기술 중심의 특허 포트폴리오</p>
+    </div>
+  </div>
+  <span class="pageno">27 / 31</span>
+</section>
+
+<!-- 28 교육청 레퍼런스 -->
+<section class="slide light" id="s28" data-n="28">
+  <div class="slide-head">
+    <div><div class="eyebrow">Education Office References</div><h2>교육청 도입 레퍼런스 — 이미 검증된 통학 운영 실적</h2></div>
+    <span class="chip">Ⅶ. 제안기관 소개</span>
+  </div>
+  <div class="grid g3 body-wrap" style="align-content:center">
+    <div class="kdark"><span class="pill">학생성공버스</span><h4 style="font-size:17px">인천광역시교육청</h4>
+      <ul class="dot" style="margin-top:8px"><li>2023년~ 현재 · 차량 51대 운영</li><li>Ciel Mobility + 신백승 컨소시엄</li><li>교육부 정부혁신 우수사례 선정</li><li>민원서비스 최우수 기관 선정</li></ul></div>
+    <div class="card"><span class="pill">통학버스</span><h3>밀양교육지원청</h3>
+      <ul class="dot"><li>2014년~ 현재 · 12년 장기 운영</li><li>초등 14개교 + 유치원 1개원</li><li>차량 35대 · 학생 677명</li><li>무사고 장기 운영 신뢰 축적</li></ul></div>
+    <div class="card"><span class="pill">통학 솔루션</span><h3>증평·괴산교육지원청</h3>
+      <ul class="dot"><li>충북 관내 초등학교 대상</li><li>통학 솔루션 공급 · 지속 운영 중</li><li>소규모 권역 운영 노하우 보유</li></ul></div>
+  </div>
+  <div class="banner tint">교육부 정부혁신 우수사례 · 12년 이상 지속 운영 · 최대 51대 동시 운영 · <b>677명+ 안전 통학</b></div>
+  <span class="pageno">28 / 31</span>
+</section>
+
+<!-- 29 SECTION VIII DIVIDER -->
+<section class="slide lime" id="s29" data-n="29">
+  <div class="brand" style="color:#14210F">Ciel Mobility</div>
+  <div class="body-wrap">
+    <div>
+      <div class="eyebrow">Ⅷ · 다음 단계</div>
+      <h1>지금 바로 시작할 수 있습니다</h1>
+      <p class="quote" style="margin-top:14px;opacity:.85">“학부모가 체감하는 정책이 가장 빠른 성과를 만듭니다”<br><span style="font-size:.75em;font-weight:600;opacity:.7">— Ciel Mobility · DtoD 야자버스 제안</span></p>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <span class="chip" style="background:#14210F;color:#DFFFC2;border:none">계약 후 3개월 내 운행 시작</span>
+      <span class="chip" style="background:#14210F;color:#DFFFC2;border:none">All-in-One 단일 계약</span>
+      <span class="chip" style="background:#14210F;color:#DFFFC2;border:none">교육청 납품 실적 보유</span>
+    </div>
+  </div>
+  <span class="pageno">29 / 31</span>
+</section>
+
+<!-- 30 ACTION PLAN -->
+<section class="slide light" id="s30" data-n="30">
+  <div class="slide-head">
+    <div><div class="eyebrow">Action Plan</div><h2>즉시 실행 Action Plan</h2></div>
+    <span class="chip">Ⅷ. 다음 단계</span>
+  </div>
+  <div class="body-wrap">
+    <div class="flow">
+      <div class="step"><div class="k">01</div><div class="t">POC 협의 착수</div><div class="d">제주시내 운영 조건·노선 세부 협의</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="k">02</div><div class="t">예산 편성 확정</div><div class="d">시범 예산 1,500만 원 협의·확정</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="k">03</div><div class="t">운행 개시</div><div class="d">계약 후 3개월 내 — 2026년 하반기</div></div>
+      <div class="arrow">→</div>
+      <div class="step" style="background:var(--ink2);color:#F2F4EF;border:none"><div class="k" style="color:var(--lime)">04</div><div class="t">성과 보고·확산</div><div class="d">KPI 검증 → 전국 선진 모델 발표</div></div>
+    </div>
+    <div class="split">
+      <div class="kdark" style="padding:26px">
+        <h3 style="font-size:17px;font-weight:900;margin-bottom:14px">교육청에 요청드리는 의사결정 사항</h3>
+        <ul class="check" style="font-size:14px">
+          <li>제주시내 유상 POC 승인 — 차량 1대 × 3개월</li>
+          <li>2026년 하반기 시범 예산 1,500만 원 편성</li>
+          <li>노선·운영 실무 협의 착수 및 시내 대상교 협조</li>
+        </ul>
+      </div>
+      <div class="card" style="background:var(--lime-tint);border-color:#CBE8AF;display:flex;align-items:center">
+        <p class="quote" style="font-size:15px;color:var(--ink)">“DtoD 야자버스는 단순한 통학 지원이 아닙니다.<br><b style="color:var(--lime-deep)">학부모가 가장 체감하는 교육복지</b>이며, 제주교육이 학생의 귀가 안전까지 책임지는 새로운 기준입니다.”</p>
+      </div>
+    </div>
+  </div>
+  <span class="pageno">30 / 31</span>
+</section>
+
+<!-- 31 CONTACT -->
+<section class="slide dark" id="s31" data-n="31">
+  <div class="brand">Ciel Mobility</div>
+  <div class="split body-wrap">
+    <div style="display:flex;flex-direction:column;justify-content:center;gap:14px">
+      <div class="eyebrow">Contact</div>
+      <h1 style="font-size:clamp(26px,3.6vw,42px)">문의 및 협의 창구</h1>
+      <table style="font-size:14px;max-width:420px">
+        <tbody>
+          <tr><td style="opacity:.55;border-color:rgba(255,255,255,.1)">담당부서</td><td style="border-color:rgba(255,255,255,.1)"><b>신사업실</b></td></tr>
+          <tr><td style="opacity:.55;border-color:rgba(255,255,255,.1)">담당자</td><td style="border-color:rgba(255,255,255,.1)"><b>이석진 이사</b></td></tr>
+          <tr><td style="opacity:.55;border-color:rgba(255,255,255,.1)">전화</td><td style="border-color:rgba(255,255,255,.1)"><b>010-8368-1092</b></td></tr>
+          <tr><td style="opacity:.55;border-color:rgba(255,255,255,.1)">이메일</td><td style="border-color:rgba(255,255,255,.1)"><b>texasman@ciel.co.kr</b></td></tr>
+          <tr><td style="opacity:.55;border:none">본사</td><td style="border:none"><b>대구광역시 동구 동대구로 475, 14층</b></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;justify-content:center">
+      <h3 style="margin-bottom:14px">즉시 실행 가능 — 준비는 끝나 있습니다</h3>
+      <ul class="check" style="font-size:13.5px">
+        <li>POC 계약 체결 후 3개월 내 운행 시작 가능</li>
+        <li>All-in-One 계약 — 복잡한 조달 절차 없음</li>
+        <li>기존 교육청 통학 지원 조례 기반 집행 가능</li>
+        <li>인천교육청 등 교육청 납품 실적 보유</li>
+        <li>24시간 고객센터 · GPS 앱 즉시 운용</li>
+        <li>교육부 정부혁신 우수사례 기관 운영</li>
+      </ul>
+      <p style="margin-top:14px;font-weight:800;color:var(--lime-deep)">협의 요청 시 즉시 상세 제안 드리겠습니다</p>
+    </div>
+  </div>
+  <div style="font-size:11px;opacity:.4;margin-top:16px">Copyright © 2026 by Ciel Mobility. All rights reserved.</div>
+  <span class="pageno">31 / 31</span>
+</section>
+
+</main>
+
+<script>
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var counter = document.getElementById('counter');
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){ counter.textContent = e.target.dataset.n + ' / 31'; }
+    });
+  }, {threshold:.5});
+  slides.forEach(function(s){ io.observe(s); });
+  document.addEventListener('keydown', function(ev){
+    if(ev.key !== 'ArrowDown' && ev.key !== 'ArrowUp' && ev.key !== 'PageDown' && ev.key !== 'PageUp') return;
+    ev.preventDefault();
+    var cur = 0, mid = window.scrollY + window.innerHeight/2;
+    slides.forEach(function(s,i){ if(s.offsetTop < mid) cur = i; });
+    var next = (ev.key==='ArrowDown'||ev.key==='PageDown') ? Math.min(cur+1, slides.length-1) : Math.max(cur-1, 0);
+    slides[next].scrollIntoView({behavior:'smooth', block:'start'});
+  });
+})();
+</script>
+</body>
+</html>
